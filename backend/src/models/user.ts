@@ -1,11 +1,21 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import bcrypt from 'bcrypt';
 
+export interface UserPreferences {
+  seatPreference?: 'window' | 'aisle' | 'middle';
+  mealPreference?: 'vegetarian' | 'non-vegetarian' | 'vegan';
+  notificationPreferences?: {
+    email?: boolean;
+    sms?: boolean;
+  };
+}
+
 export class User extends Model {
   public id!: number;
   public email!: string;
   public password!: string;
   public name!: string;
+  public preferences!: UserPreferences;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -32,6 +42,11 @@ export class User extends Model {
         name: {
           type: DataTypes.STRING,
           allowNull: false
+        },
+        preferences: {
+          type: DataTypes.JSON,
+          allowNull: true,
+          defaultValue: {}
         }
       },
       {

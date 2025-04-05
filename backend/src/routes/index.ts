@@ -1,16 +1,19 @@
 import express from 'express';
-// import { register, login } from '../controllers/userController.js';
-import { getAllFlights,  searchFlights } from '../controllers/flightController.js';
+import { Router } from 'express';
+import authRoutes from './auth/auth.routes.js';
+import flightRoutes from './flight/flight.routes.js';
+import bookingRoutes from './booking/booking.routes.js';
+import userRoutes from './user/user.routes.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
-// User routes
-// router.post('/user/registration', register);
-// router.post('/user/login', login);
+// API version prefix
+const API_PREFIX = '/api/v1';
 
-// Flight routes
-router.get('/flight', getAllFlights);
-router.get('/flights/search', searchFlights);
-// router.get('/flights/:id', getFlightById);
+// Mount routes
+router.use(`${API_PREFIX}/auth`, authRoutes);
+router.use(`${API_PREFIX}`, flightRoutes);
+router.use(`${API_PREFIX}`, bookingRoutes);
+router.use(`${API_PREFIX}`, userRoutes);
 
 export default router;

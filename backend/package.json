@@ -4,7 +4,6 @@
   "description": "",
   "main": "dist/index.js",
   "type": "module",
-
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
@@ -28,12 +27,13 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.1",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.14.0",
     "@types/sequelize": "^4.28.20",
     "nodemon": "^3.1.9",
     "sequelize-cli": "^6.6.2",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2"
   }
 }

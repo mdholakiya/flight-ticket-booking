@@ -1,17 +1,33 @@
 import { Request, Response } from 'express';
-import User from '../models/user.js';
+import User from '../../models/user.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export const register = async (req: Request, res: Response) => {
+interface RegisterRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+    name: string;
+  };
+}
+
+interface LoginRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+  };
+}
+
+export const register = async (req: RegisterRequest, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      res.status(400).json({ message: 'User already exists' });
+      return;
     }
 
     // Create new user
@@ -37,20 +53,22 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: LoginRequest, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     // Find user by email
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
     }
 
     // Generate JWT token
@@ -70,5 +88,15 @@ export const login = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Error logging in' });
+  }
+};
+
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Since JWT is stateless, we just need to tell the client to remove the token
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Error logging out' });
   }
 }; 
