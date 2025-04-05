@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
+    "dev": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings src/index.ts",
+    "dev:win": "dev.bat",
     "build": "tsc",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
@@ -27,7 +28,7 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.1",
-    "@types/jsonwebtoken": "^9.0.9",
+    "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^22.14.0",
     "@types/sequelize": "^4.28.20",
     "nodemon": "^3.1.9",

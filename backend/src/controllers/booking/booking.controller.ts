@@ -7,6 +7,10 @@ export const createBooking = async (req: Request, res: Response) => {
     const { flightId, seats } = req.body;
     const userId = req.user?.id;
 
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     // Check if flight exists
     const flight = await Flight.findByPk(flightId);
     if (!flight) {
@@ -30,8 +34,9 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
-    // TODO: Add admin check middleware
+    const userId = req.user?.id;
     const bookings = await Booking.findAll({
+      where: { userId },
       include: [{ model: Flight }]
     });
     res.json(bookings);

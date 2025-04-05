@@ -1,5 +1,4 @@
-import express from 'express';
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import {
     createBooking,
     getAllBookings,
@@ -10,21 +9,25 @@ import {
     processPayment,
     confirmBooking
 } from '../../controllers/booking/booking.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
 
-const router: Router = express.Router();
+const router = Router();
+
+// Apply authentication middleware to all booking routes
+router.use(authenticate as RequestHandler);
 
 // Booking routes
-router.post('/bookings', createBooking);
-router.get('/bookings', getAllBookings);
-router.get('/bookings/:id', getBookingById);
-router.put('/bookings/:id', updateBooking);
-router.delete('/bookings/:id', cancelBooking);
+router.post('/bookings', createBooking as RequestHandler);
+router.get('/bookings', getAllBookings as RequestHandler);
+router.get('/bookings/:id', getBookingById as RequestHandler);
+router.put('/bookings/:id', updateBooking as RequestHandler);
+router.delete('/bookings/:id', cancelBooking as RequestHandler);
 
 // User bookings
-router.get('/bookings/user/:userId', getUserBookings);
+router.get('/bookings/user', getUserBookings as RequestHandler);
 
 // Booking payment and confirmation
-router.post('/bookings/:id/payment', processPayment);
-router.post('/bookings/:id/confirm', confirmBooking);
+router.post('/bookings/:id/payment', processPayment as RequestHandler);
+router.post('/bookings/:id/confirm', confirmBooking as RequestHandler);
 
 export default router; 
