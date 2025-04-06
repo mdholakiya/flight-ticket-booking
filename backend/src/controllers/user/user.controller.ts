@@ -1,24 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import User, { UserPreferences } from '../../models/user.js';
+import { AuthRequest, UpdateProfileRequest, UpdatePreferencesRequest } from '../../types/request.js';
 
-interface UserRequest extends Request {
-  user?: {
-    id: string;
-  };
-}
-
-interface UpdateProfileRequest extends UserRequest {
-  body: {
-    name?: string;
-    email?: string;
-  };
-}
-
-interface UpdatePreferencesRequest extends UserRequest {
-  body: Partial<UserPreferences>;
-}
-
-export const getProfile = async (req: UserRequest, res: Response): Promise<void> => {
+export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -53,21 +37,22 @@ export const updateProfile = async (req: UpdateProfileRequest, res: Response): P
     }
 
     const { name, email } = req.body;
-    
     const user = await User.findByPk(userId);
+
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    
-    await user.update({ name, email });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+
+    await user.save();
     res.json({
-      message: 'Profile updated successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      }
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      preferences: user.preferences
     });
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -75,7 +60,7 @@ export const updateProfile = async (req: UpdateProfileRequest, res: Response): P
   }
 };
 
-export const getPreferences = async (req: UserRequest, res: Response): Promise<void> => {
+export const getPreferences = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -88,8 +73,8 @@ export const getPreferences = async (req: UserRequest, res: Response): Promise<v
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    
-    res.json({ preferences: user.preferences });
+
+    res.json(user.preferences);
   } catch (error) {
     console.error('Error fetching preferences:', error);
     res.status(500).json({ message: 'Error fetching preferences' });
@@ -104,19 +89,16 @@ export const updatePreferences = async (req: UpdatePreferencesRequest, res: Resp
       return;
     }
 
-    const preferences = req.body;
-    
     const user = await User.findByPk(userId);
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    
-    await user.update({ preferences });
-    res.json({
-      message: 'Preferences updated successfully',
-      preferences: user.preferences
-    });
+
+    user.preferences = { ...user.preferences, ...req.body };
+    await user.save();
+
+    res.json(user.preferences);
   } catch (error) {
     console.error('Error updating preferences:', error);
     res.status(500).json({ message: 'Error updating preferences' });

@@ -23,6 +23,7 @@ router.get('/bookings/:id', getBookingById as RequestHandler);
 router.put('/bookings/:id', updateBooking as RequestHandler);
 router.delete('/bookings/:id', cancelBooking as RequestHandler);
 
+
 // User bookings
 router.get('/bookings/user', getUserBookings as RequestHandler);
 

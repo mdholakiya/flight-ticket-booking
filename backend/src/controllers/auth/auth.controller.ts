@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import User from '../../models/user.js';
+// import User from '/models/user.js';
+import User from '../../models/user.js'
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';

@@ -1,11 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-  };
-}
+import { AuthRequest } from '../types/request.js';
 
 export const authenticateToken = async (
   req: AuthRequest,
@@ -34,7 +29,7 @@ export const authenticateToken = async (
       }
 
       req.user = {
-        id: decoded.userId
+        id: Number(decoded.userId)
       };
       next();
     });

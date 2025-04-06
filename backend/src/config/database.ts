@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize';
+import { Sequelize, Options } from 'sequelize';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,7 +11,7 @@ const {
   DB_NAME = 'flight_booking'
 } = process.env;
 
-export const sequelize = new Sequelize({
+const config: Options = {
   dialect: 'postgres',
   host: DB_HOST,
   port: parseInt(DB_PORT),
@@ -23,6 +23,17 @@ export const sequelize = new Sequelize({
     timestamps: true,
     underscored: true
   }
-});
+};
 
+const sequelize = new Sequelize(config);
+
+// Export for Sequelize CLI
+module.exports = {
+  development: config,
+  test: config,
+  production: config
+};
+
+// Export for application use
+export { sequelize };
 export default sequelize;

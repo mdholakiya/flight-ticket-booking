@@ -9,7 +9,7 @@ import { errorHandler } from './middleware/error.middleware.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(express.json());
@@ -19,21 +19,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', routes);
 
 // Error handling middleware
-app.use(errorHandler);
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  errorHandler(err, req, res, next);
+});
 
 // Database connection and server start
 const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
-    
+
     // Initialize models
     initModels(sequelize);
-    
+
     // Sync all models
     await sequelize.sync({ alter: true });
     console.log('Database & tables created!');
-    
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
