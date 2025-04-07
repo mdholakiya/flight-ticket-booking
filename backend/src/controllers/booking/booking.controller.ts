@@ -4,7 +4,15 @@ import Flight from '../../models/flight.js';
 
 export const createBooking = async (req: Request, res: Response) => {
   try {
-    const { flightId, seats } = req.body;
+    const { 
+      flightId, 
+      passengerName, 
+      passengerEmail, 
+      numberOfSeats, 
+      totalPrice, 
+      status 
+    } = req.body;
+    
     const userId = req.user?.id;
 
     if (!userId) {
@@ -17,18 +25,28 @@ export const createBooking = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Flight not found' });
     }
 
-    // Create booking
+    // Create booking with all required fields
     const booking = await Booking.create({
       userId,
       flightId,
-      seats,
-      status: 'pending'
+      passengerName,
+      passengerEmail,
+      numberOfSeats,
+      totalPrice,
+      status: status || 'pending'
     });
+
     console.log('Booking created:', booking);
     res.status(201).json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);
-    res.status(500).json({ message: 'Error creating booking' });
+    // Use type guard to check if error is an instance of Error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ 
+      message: 'Error creating booking',
+      error: errorMessage,
+      details: error instanceof Error ? error.toString() : 'Unknown error'
+    });
   }
 };
 

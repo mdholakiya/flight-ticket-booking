@@ -1,5 +1,6 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
+
 export class Booking extends Model {
   public id!: number;
   public flightId!: number;
