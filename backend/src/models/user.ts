@@ -1,23 +1,32 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import bcrypt from 'bcrypt';
 
-export interface UserPreferences {
-  seatPreference?: 'window' | 'aisle' | 'middle';
-  mealPreference?: 'vegetarian' | 'non-vegetarian' | 'vegan';
-  notificationPreferences?: {
-    email?: boolean;
-    sms?: boolean;
-  };
+interface UserAttributes {
+  id?: number;
+  email: string;
+  password: string;
+  name: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  otp?: string | null;
+  otpExpiry?: Date | null;
+  resetToken?: string | null;
+  resetTokenExpiry?: Date | null;
 }
 
-export class User extends Model {
-  public id!: number;
-  public email!: string;
-  public password!: string;
-  public name!: string;
-  public preferences!: UserPreferences;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+interface UserCreationAttributes extends Omit<UserAttributes, 'id'> {}
+
+export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+  declare id: number;
+  declare email: string;
+  declare password: string;
+  declare name: string;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
+  declare otp?: string | null;
+  declare otpExpiry?: Date | null;
+  declare resetToken?: string | null;
+  declare resetTokenExpiry?: Date | null;
 
   static initModel(sequelize: Sequelize) {
     User.init(
@@ -43,36 +52,47 @@ export class User extends Model {
           type: DataTypes.STRING,
           allowNull: false
         },
-        preferences: {
-          type: DataTypes.JSON,
-          allowNull: true,
-          defaultValue: {}
+        otp: {
+          type: DataTypes.STRING,
+          allowNull: true
+        },
+        otpExpiry: {
+          type: DataTypes.DATE,
+          allowNull: true
+        },
+        resetToken: {
+          type: DataTypes.STRING,
+          allowNull: true
+        },
+        resetTokenExpiry: {
+          type: DataTypes.DATE,
+          allowNull: true
         }
       },
       {
         sequelize,
         modelName: 'User',
-        tableName: 'Users',
-        hooks: {
-          beforeCreate: async (user: User) => {
-            if (user.password) {
-              const salt = await bcrypt.genSalt(10);
-              user.password = await bcrypt.hash(user.password, salt);
-            }
-          },
-          beforeUpdate: async (user: User) => {
-            if (user.changed('password')) {
-              const salt = await bcrypt.genSalt(10);
-              user.password = await bcrypt.hash(user.password, salt);
-            }
-          }
-        }
+        tableName: 'Users'
       }
     );
   }
 
-  async comparePassword(password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
+  public async comparePassword(candidatePassword: string): Promise<boolean> {
+    try {
+      if (!this.password) {
+        console.error('Password not set for user:', this.id);
+        return false;
+      }
+
+      console.log('Comparing passwords for user:', this.id);
+      const isMatch = await bcrypt.compare(candidatePassword, this.password);
+      console.log('Password comparison result:', isMatch);
+      
+      return isMatch;
+    } catch (error) {
+      console.error('Error comparing passwords:', error);
+      return false;
+    }
   }
 }
 

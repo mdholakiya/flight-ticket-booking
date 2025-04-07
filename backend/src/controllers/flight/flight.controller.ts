@@ -29,6 +29,7 @@ interface FlightSearchRequest extends Request {
 export const getAllFlights = async (req: Request, res: Response): Promise<void> => {
   try {
     const flights = await Flight.findAll();
+    console.log('all flights', flights);
     res.json(flights);
   } catch (error) {
     console.error('Error fetching flights:', error);
@@ -45,7 +46,7 @@ export const getFlightById = async (req: Request, res: Response): Promise<void> 
       res.status(404).json({ message: 'Flight not found' });
       return;
     }
-    
+    console.log('specificflight', flight);
     res.json(flight);
   } catch (error) {
     console.error('Error fetching flight:', error);
@@ -56,6 +57,7 @@ export const getFlightById = async (req: Request, res: Response): Promise<void> 
 export const createFlight = async (req: Request, res: Response): Promise<void> => {
   try {
     const flight = await Flight.create(req.body);
+    console.log('Flight created:', flight);
     res.status(201).json(flight);
   } catch (error) {
     console.error('Error creating flight:', error);
@@ -74,6 +76,7 @@ export const updateFlight = async (req: Request, res: Response): Promise<void> =
     }
     
     await flight.update(req.body);
+    console.log('Flight updated:', flight);
     res.json(flight);
   } catch (error) {
     console.error('Error updating flight:', error);

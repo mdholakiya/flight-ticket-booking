@@ -24,7 +24,7 @@ export const createBooking = async (req: Request, res: Response) => {
       seats,
       status: 'pending'
     });
-
+    console.log('Booking created:', booking);
     res.status(201).json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);

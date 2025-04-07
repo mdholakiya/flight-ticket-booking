@@ -8,8 +8,14 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Check for token in Authorization header
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    let token = authHeader && authHeader.split(' ')[1];
+
+    // If no token in header, check cookies
+    if (!token) {
+      token = req.cookies?.token;
+    }
 
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
@@ -28,8 +34,25 @@ export const authenticateToken = async (
         return;
       }
 
+      // Store token in cookie if it came from Authorization header
+      if (authHeader) {
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+      }
+
+      // Ensure the decoded token has a valid user ID
+      if (!decoded || typeof decoded.id !== 'number') {
+        console.error('Invalid token payload:', decoded);
+        res.status(403).json({ message: 'Invalid token payload' });
+        return;
+      }
+
       req.user = {
-        id: Number(decoded.userId)
+        id: decoded.id
       };
       next();
     });
