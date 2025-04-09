@@ -11,70 +11,32 @@ import { API_CONFIG } from '@/config/api.config';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import SendOtp from './sendOtp';
+import UpdateProfile from './UpdateProfile';
+import ResetPassword from './ResetPassword';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [showUpdateProfile, setShowUpdateProfile] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const router = useRouter();
 
-  // Function to verify OTP
-  const handleVerifyOtp = async () => {
-    if (!user) {
-      console.error('User not found');
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REQUEST_OTP}`,
-        { email: user.email, otp }
-      );
-
-      console.log('OTP verified successfully:', response.data);
-      toast.success('OTP verified successfully');
-      setIsUpdatingProfile(true); // Proceed to update profile
-    } catch (error) {
-      console.error('Failed to verify OTP:', error);
-      toast.error('Invalid OTP');
-    }
-  };
-
   // Function to update profile
-  const handleUpdateProfile = async () => {
-    if (!user) {
-      console.error('User not found');
-      toast.error('User not found');
-      return;
-    }
-
-    // Call the SendOtp component to send OTP before updating the profile
-    // This will be handled in the SendOtp component
+  const handleUpdateProfile = () => {
+    setIsProfileOpen(false);
+    setShowUpdateProfile(true);
   };
 
   // Function to reset password
-  const handleResetPassword = async () => {
-    try {
-      if (!user?.email) {
-        console.error('User email not found');
-        return;
-      }
+  const handleResetPassword = () => {
+    setIsProfileOpen(false);
+    setShowResetPassword(true);
+  };
 
-      const response = await axios.post(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RESET_PASSWORD}`,
-        { email: user.email }
-      );
-
-      console.log('Reset password link sent successfully:', response.data);
-      toast.success('Reset password link sent to your email');
-    } catch (error: any) {
-      console.error('Failed to send reset password link:', error.response ? error.response.data : error.message);
-      toast.error('Failed to send reset password link');
-    }
+  const handleProfileUpdate = () => {
+    toast.success('Profile updated successfully');
+    // You might want to refresh the user data here
   };
 
   return (
@@ -149,34 +111,17 @@ export default function Navbar() {
                   {isProfileOpen && (
                     <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-xl shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 transform transition-all duration-200">
                       <button
-                        onClick={handleResetPassword}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        Reset Password
-                      </button>
-                      <button
                         onClick={handleUpdateProfile}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                       >
                         Update Profile
                       </button>
-                      {isOtpSent && (
-                        <div className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            placeholder="Enter OTP"
-                            className="border rounded-md p-1"
-                          />
-                          <button
-                            onClick={handleVerifyOtp}
-                            className="ml-2 bg-blue-600 text-white rounded-md px-2 py-1"
-                          >
-                            Verify OTP
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={handleResetPassword}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        Reset Password
+                      </button>
                       <button
                         onClick={logout}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
@@ -186,7 +131,7 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-              ) : null} {/* Removed login/signup button */}
+              ) : null}
             </div>
           </div>
         </div>
@@ -213,6 +158,17 @@ export default function Navbar() {
             </Link>
           </div>
         </div>
+      )}
+
+      {/* Modals */}
+      {showUpdateProfile && (
+        <UpdateProfile
+          onClose={() => setShowUpdateProfile(false)}
+          onUpdate={handleProfileUpdate}
+        />
+      )}
+      {showResetPassword && (
+        <ResetPassword onClose={() => setShowResetPassword(false)} />
       )}
     </nav>
   );
