@@ -25,7 +25,7 @@ router.delete('/bookings/:id', cancelBooking as RequestHandler);
 
 
 // User bookings
-router.get('/bookings/user', getUserBookings as RequestHandler);
+router.get('/bookings', getUserBookings as RequestHandler);
 
 // Booking payment and confirmation
 router.post('/bookings/:id/payment', processPayment as RequestHandler);

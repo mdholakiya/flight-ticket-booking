@@ -4,6 +4,10 @@ import { AuthRequest, UpdateProfileRequest } from '../../types/request.js';
 import { sendOTPEmail } from '../../utils/nodeMailer.js';
 import { generateOTP } from '../../utils/otp.js';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -100,7 +104,7 @@ export const requestProfileUpdateOTP = async (req: AuthRequest, res: Response): 
 
     // Save OTP to database
     user.otp = otp;
-    user.otpExpiry = otpExpiry;
+    user.otp_expiry = otpExpiry;
     await user.save();
     console.log('OTP saved to database for user:', user.email);
 
@@ -140,10 +144,10 @@ export const verifyOTPAndUpdateProfile = async (req: UpdateProfileRequest, res: 
 
     console.log('Verifying OTP for user:', user.email);
     console.log('Stored OTP:', user.otp);
-    console.log('Stored OTP Expiry:', user.otpExpiry);
+    console.log('Stored OTP Expiry:', user.otp_expiry);
 
     // Check if OTP was ever requested
-    if (!user.otp || !user.otpExpiry) {
+    if (!user.otp || !user.otp_expiry) {
       console.log('No OTP found for user:', user.email);
       res.status(400).json({ 
         message: 'No OTP requested. Please request an OTP first.',
@@ -154,11 +158,11 @@ export const verifyOTPAndUpdateProfile = async (req: UpdateProfileRequest, res: 
 
     // Check if OTP is expired
     const currentTime = new Date();
-    if (user.otpExpiry < currentTime) {
+    if (user.otp_expiry < currentTime) {
       console.log('OTP expired for user:', user.email);
       // Clear expired OTP
       user.otp = null;
-      user.otpExpiry = null;
+      user.otp_expiry = null;
       await user.save();
       
       res.status(400).json({ 
@@ -182,7 +186,7 @@ export const verifyOTPAndUpdateProfile = async (req: UpdateProfileRequest, res: 
 
     // Clear OTP after successful verification
     user.otp = null;
-    user.otpExpiry = null;
+    user.otp_expiry = null;
 
     // Update profile
     if (name) user.name = name;
@@ -206,6 +210,7 @@ export const verifyOTPAndUpdateProfile = async (req: UpdateProfileRequest, res: 
   }
 };
 
+//password reset
 export const requestPasswordReset = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
@@ -216,41 +221,153 @@ export const requestPasswordReset = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    // Generate JWT token for password reset
+    const resetToken = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email,
+        purpose: 'password_reset' 
+      }, 
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-    user.resetToken = resetToken;
-    user.resetTokenExpiry = resetTokenExpiry;
+    // Store the token expiry in the database
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    user.reset_token = resetToken;
+    user.reset_token_expiry = resetTokenExpiry;
     await user.save();
 
+    // Create reset link with JWT token
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    await sendOTPEmail(user.name, user.email, `Reset your password using this link: ${resetLink}`);
+    
+    // Send reset link via email
+    await sendOTPEmail(
+      user.name, 
+      user.email, 
+      `Reset your password using this secure link: ${resetLink}\nThis link will expire in 1 hour.`
+    );
 
-    res.json({ message: 'Password reset link sent to your email' });
+    res.json({ 
+      message: 'Password reset link sent to your email',
+      expiresIn: '1 hour'
+    });
+    console.log('Password reset link sent to your email-----------------');
   } catch (error) {
     console.error('Error requesting password reset:', error);
-    res.status(500).json({ message: 'Error requesting password reset' });
+    res.status(500).json({ 
+      message: 'Error requesting password reset',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 
 export const resetPassword = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { token, newPassword } = req.body;
-    const user = await User.findOne({ where: { resetToken: token, resetTokenExpiry: { $gt: new Date() } } });
+
+    // Verify the JWT token
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(token, JWT_SECRET) as { id: number; email: string; purpose: string };
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid or expired token' });
+      return;
+    }
+
+    // Check if token is for password reset
+    if (decodedToken.purpose !== 'password_reset') {
+      res.status(400).json({ message: 'Invalid token purpose' });
+      return;
+    }
+
+    // Find user and verify token in database
+    const user = await User.findOne({ 
+      where: { 
+        id: decodedToken.id,
+        email: decodedToken.email,
+        reset_token: token,
+        reset_token_expiry: { $gt: new Date() }
+      } 
+    });
 
     if (!user) {
       res.status(400).json({ message: 'Invalid or expired token' });
       return;
     }
 
-    user.password = newPassword; // Ensure password is hashed before saving
-    user.resetToken = null;
-    user.resetTokenExpiry = null;
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update password and clear reset token
+    user.password = hashedPassword;
+    user.reset_token = null;
+    user.reset_token_expiry = null;
     await user.save();
 
-    res.json({ message: 'Password reset successfully' });
+    res.json({ 
+      message: 'Password reset successfully',
+      email: user.email
+    });
+    console.log('Password reset successfully');
   } catch (error) {
     console.error('Error resetting password:', error);
-    res.status(500).json({ message: 'Error resetting password' });
+    res.status(500).json({ 
+      message: 'Error resetting password',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { oldPassword, newPassword, confirmNewPassword } = req.body;
+
+    // Validate required fields
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      res.status(400).json({ message: 'All fields are required' });
+      return;
+    }
+
+    // Check if new password matches confirm password
+    if (newPassword !== confirmNewPassword) {
+      res.status(400).json({ message: 'New password and confirm password do not match' });
+      return;
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      res.status(400).json({ message: 'Current password is incorrect' });
+      return;
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+    console.log('Password updated successfully ','old:',newPassword,'new:',oldPassword);
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ 
+      message: 'Error changing password',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }; 

@@ -1,26 +1,31 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-export interface FlightAttributes {
-  id: number;
-  flightNumber: string;
-  departureAirport: string;
-  arrivalAirport: string;
-  departureTime: Date;
-  arrivalTime: Date;
-  price: number;
-  availableSeats: number;
-}
 
-export class Flight extends Model<FlightAttributes> {
- id!: number;
- flightNumber!: string;
- departureAirport!: string;
- arrivalAirport!: string;
- departureTime!: Date;
- arrivalTime!: Date;
- price!: number;
- availableSeats!: number;
- readonly createdAt!: Date;
- readonly updatedAt!: Date;
+// export interface FlightAttributes {
+//   id?: number;
+//   flightNumber: string;
+//   departureAirport: string;
+//   arrivalAirport: string;
+//   departureTime: Date;
+//   arrivalTime: Date;
+//   price: number;
+//   availableSeats: number;
+//   classType: 'Economy' | 'Business Class' | 'First Class';
+//   createdAt?: Date;
+//   updatedAt?: Date;
+// }
+
+export class Flight extends Model {
+  public id!: number;
+  public flightNumber!: string;
+  public departureAirport!: string;
+  public arrivalAirport!: string;
+  public departureTime!: Date;
+  public arrivalTime!: Date;
+  public price!: number;
+  public availableSeats!: number;
+  public classType!: 'Economy' | 'Business Class' | 'First Class';
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
 
   static initModel(sequelize: Sequelize) {
     Flight.init(
@@ -58,12 +63,19 @@ export class Flight extends Model<FlightAttributes> {
         availableSeats: {
           type: DataTypes.INTEGER,
           allowNull: false
+        },
+        classType: {
+          type: DataTypes.ENUM('Economy', 'Business Class', 'First Class'),
+          allowNull: false,
+          defaultValue: 'Economy'
         }
       },
       {
         sequelize,
         modelName: 'Flight',
-        tableName: 'Flights'
+        tableName: 'Flights',
+        underscored: false,
+        timestamps: true
       }
     );
   }

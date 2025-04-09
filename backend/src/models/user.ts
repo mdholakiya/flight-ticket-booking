@@ -6,12 +6,12 @@ interface UserAttributes {
   email: string;
   password: string;
   name: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
   otp?: string | null;
-  otpExpiry?: Date | null;
-  resetToken?: string | null;
-  resetTokenExpiry?: Date | null;
+  otp_expiry?: Date | null;
+  reset_token?: string | null;
+  reset_token_expiry?: Date | null;
 }
 
 interface UserCreationAttributes extends Omit<UserAttributes, 'id'> {}
@@ -21,12 +21,12 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare email: string;
   declare password: string;
   declare name: string;
-  declare readonly createdAt: Date;
-  declare readonly updatedAt: Date;
+  declare readonly created_at: Date;
+  declare readonly updated_at: Date;
   declare otp?: string | null;
-  declare otpExpiry?: Date | null;
-  declare resetToken?: string | null;
-  declare resetTokenExpiry?: Date | null;
+  declare otp_expiry?: Date | null;
+  declare reset_token?: string | null;
+  declare reset_token_expiry?: Date | null;
 
   static initModel(sequelize: Sequelize) {
     User.init(
@@ -54,25 +54,45 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
         },
         otp: {
           type: DataTypes.STRING,
-          allowNull: true
+          allowNull: true,
+          field: 'otp'
         },
-        otpExpiry: {
+        otp_expiry: {
           type: DataTypes.DATE,
-          allowNull: true
+          allowNull: true,
+          field: 'otp_expiry'
         },
-        resetToken: {
+        reset_token: {
           type: DataTypes.STRING,
-          allowNull: true
+          allowNull: true,
+          field: 'reset_token'
         },
-        resetTokenExpiry: {
+        reset_token_expiry: {
           type: DataTypes.DATE,
-          allowNull: true
+          allowNull: true,
+          field: 'reset_token_expiry'
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+          field: 'created_at'
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+          field: 'updated_at'
         }
       },
       {
         sequelize,
         modelName: 'User',
-        tableName: 'Users'
+        tableName: 'Users',
+        timestamps: true,
+        underscored: true,
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
       }
     );
   }

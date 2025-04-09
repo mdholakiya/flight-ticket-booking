@@ -14,7 +14,8 @@ export const createBooking = async (req: Request, res: Response) => {
     } = req.body;
     
     const userId = req.user?.id;
-
+    
+    console.log('userId------------------');
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -52,11 +53,10 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
     const bookings = await Booking.findAll({
-      where: { userId },
-      include: [{ model: Flight }]
+      include: [{ model: Flight }],
     });
+
     res.json(bookings);
   } catch (error) {
     console.error('Error fetching bookings:', error);
@@ -121,6 +121,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
     }
 
     await booking.update({ status: 'cancelled' });
+    console.log('Booking cancelled successfully');
     res.json({ message: 'Booking cancelled successfully' });
   } catch (error) {
     console.error('Error cancelling booking:', error);
@@ -131,14 +132,50 @@ export const cancelBooking = async (req: Request, res: Response) => {
 export const getUserBookings = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    console.log('userId------------------', userId);
+    // Check if user is authenticated
+    if (!userId) {
+      console.log('User not authenticated');
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    console.log('Fetching bookings for user:', userId);
+
+    // Get all bookings with flight details
     const bookings = await Booking.findAll({
       where: { userId },
-      include: [{ model: Flight }]
+      include: [{ 
+        model: Flight,
+        attributes: ['flightNumber', 'departureAirport', 'arrivalAirport', 'departureTime', 'arrivalTime', 'price']
+      }],
+      order: [['createdAt', 'DESC']] // Most recent bookings first
     });
-    res.json(bookings);
+
+    console.log('Found bookings:', bookings.length);
+
+    // If no bookings found, return empty array with message
+    if (!bookings || bookings.length === 0) {
+      return res.status(200).json({
+        message: 'No bookings found for this user',
+        bookings: []
+      });
+    }
+
+    // Return bookings with success message
+    console.log('Bookings retrieved successfully----------------------');
+    res.json({
+      message: 'Bookings retrieved successfully',
+      count: bookings.length,
+      bookings: bookings
+    });
+
   } catch (error) {
     console.error('Error fetching user bookings:', error);
-    res.status(500).json({ message: 'Error fetching user bookings' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ 
+      message: 'Error fetching user bookings',
+      error: errorMessage
+    });
   }
 };
 

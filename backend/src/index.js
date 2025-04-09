@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import  {sequelize}  from './config/database.js';
 import routes from './routes/index.js';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api', routes);
-
+app.use(cors());
 // Database connection and server start
 const startServer = async () => {
   try {

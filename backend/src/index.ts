@@ -1,15 +1,26 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import sequelize from './config/database.js';
+import { sequelize } from './config/database.js';
 import routes from './routes/index.js';
 import { initModels } from './models/index.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import cors from 'cors';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000'];
+
+// CORS configuration
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true, // Allow cookies and credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+}));
 
 // Middleware
 app.use(express.json());
@@ -31,10 +42,6 @@ const startServer = async () => {
 
     // Initialize models
     initModels(sequelize);
-
-    // Sync all models
-    await sequelize.sync({ alter: true });
-    console.log('Database & tables created!');
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

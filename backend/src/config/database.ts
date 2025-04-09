@@ -28,7 +28,7 @@ const config: Options = {
 const sequelize = new Sequelize(config);
 
 // Export for Sequelize CLI
-module.exports = {
+export const sequelizeConfig = {
   development: config,
   test: config,
   production: config

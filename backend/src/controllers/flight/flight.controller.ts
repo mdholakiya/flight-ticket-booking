@@ -3,12 +3,14 @@ import { ParsedQs } from 'qs';
 import Flight from '../../models/flight.js';
 
 interface FlightData {
+  flightNumber: string;
   departureAirport: string;
   arrivalAirport: string;
   departureTime: string;
   arrivalTime: string;
   price: number;
   availableSeats: number;
+  classType: 'Economy' | 'Business Class' | 'First Class';
   [key: string]: any;
 }
 
@@ -56,12 +58,79 @@ export const getFlightById = async (req: Request, res: Response): Promise<void> 
 
 export const createFlight = async (req: Request, res: Response): Promise<void> => {
   try {
-    const flight = await Flight.create(req.body);
+    const { 
+      flightNumber,
+      departureAirport,
+      arrivalAirport,
+      departureTime,
+      arrivalTime,
+      price,
+      availableSeats,
+      classType,
+    } = req.body;
+
+    // Log the request body for debugging
+    console.log('Request body:', req.body);
+
+    // Validate required fields
+    if (!flightNumber || !departureAirport || !arrivalAirport || !departureTime || !arrivalTime || !price || !availableSeats || !classType) {
+      res.status(400).json({ message: 'All fields are required' });
+      return;
+    }
+
+    // Validate dates
+    const parsedDepartureTime = new Date(departureTime);
+    const parsedArrivalTime = new Date(arrivalTime);
+
+    if (isNaN(parsedDepartureTime.getTime()) || isNaN(parsedArrivalTime.getTime())) {
+      res.status(400).json({ message: 'Invalid date format for departure or arrival time' });
+      return;
+    }
+
+    // Validate that departure time is before arrival time
+    if (parsedDepartureTime >= parsedArrivalTime) {
+      res.status(400).json({ message: 'Departure time must be before arrival time' });
+      return;
+    }
+
+    // Validate price and seats
+    if (typeof price !== 'number' || price <= 0) {
+      res.status(400).json({ message: 'Price must be a positive number' });
+      return;
+    }
+
+    if (typeof availableSeats !== 'number' || availableSeats < 0) {
+      res.status(400).json({ message: 'Available seats must be a non-negative number' });
+      return;
+    }
+
+    // Validate class type
+    const validClassTypes = ['Economy', 'Business Class', 'First Class'];
+    if (!validClassTypes.includes(classType)) {
+      res.status(400).json({ message: 'Invalid class type' });
+      return;
+    }
+
+    const flight = await Flight.create({
+      flightNumber,
+      departureAirport,
+      arrivalAirport,
+      departureTime: parsedDepartureTime,
+      arrivalTime: parsedArrivalTime,
+      price,
+      availableSeats,
+      classType
+    });
+
     console.log('Flight created:', flight);
     res.status(201).json(flight);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating flight:', error);
-    res.status(500).json({ message: 'Error creating flight' });
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      res.status(400).json({ message: 'Flight number already exists' });
+      return;
+    }
+    res.status(500).json({ message: 'Error creating flight', error: error.message });
   }
 };
 
@@ -104,12 +173,12 @@ export const deleteFlight = async (req: Request, res: Response): Promise<void> =
 
 export const searchFlights = async (req: FlightSearchRequest, res: Response): Promise<void> => {
   try {
-    const { departureAirport, arrivalAirport, departureTime } = req.query;
+    const { departure_airport, arrival_airport, departure_time } = req.query;
     
     const where: any = {};
-    if (departureAirport) where.departureAirport = departureAirport;
-    if (arrivalAirport) where.arrivalAirport = arrivalAirport;
-    if (departureTime) where.departureTime = departureTime;
+    if (departure_airport) where.departure_airport = departure_airport;
+    if (arrival_airport) where.arrival_airport = arrival_airport;
+    if (departure_time) where.departure_time = departure_time;
     
     const flights = await Flight.findAll({ where });
     res.json(flights);

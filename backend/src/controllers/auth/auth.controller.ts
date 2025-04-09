@@ -14,7 +14,7 @@ const validateUsername = (username: string): boolean => {
 };
 
 const validatePassword = (password: string): boolean => {
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{4,}$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{4,6}$/;
   return passwordRegex.test(password);
 };
 
@@ -70,7 +70,9 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
     const user = await User.create({
       email,
       password: hashedPassword,
-      name
+      name,
+      created_at: new Date(),
+      updated_at: new Date()
     });
 
     // Send welcome email
@@ -90,9 +92,9 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         name: user.name
       }
     });
-    console.log(user," register user data")
+    console.log(user, " register user data");
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Error registering user:', error);
     res.status(500).json({ 
       message: 'Error registering user',
       error: error instanceof Error ? error.message : 'Unknown error'
