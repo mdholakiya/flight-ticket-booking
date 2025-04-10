@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@layer base {
+  html {
+    @apply h-full scroll-smooth antialiased;
+  }
+
+  body {
+    @apply h-full bg-gray-50 text-gray-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  h1 {
+    @apply text-4xl font-bold md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl font-bold md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl font-bold md:text-3xl;
+  }
+}
+
+@layer components {
+  /* Layout Components */
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  .section {
+    @apply py-12 sm:py-16 lg:py-20;
+  }
+
+  /* Button Components */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary-500 text-white hover:bg-secondary-600 focus:ring-secondary-500;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-primary-500 text-primary-500 hover:bg-primary-50 focus:ring-primary-500;
+  }
+
+  /* Form Components */
+  .form-control {
+    @apply block w-full;
+  }
+
+  .input {
+    @apply form-control px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder:text-gray-400;
+  }
+
+  .form-group {
+    @apply space-y-2 mb-4;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700;
+  }
+
+  .form-error {
+    @apply text-sm text-error-500 mt-1;
+  }
+
+  /* Card Components */
+  .card {
+    @apply bg-white rounded-xl shadow-card hover:shadow-card-hover transition-shadow duration-300;
+  }
+
+  .flight-card {
+    @apply card p-6 hover:shadow-card-hover transition-all duration-300 cursor-pointer animate-fade-in;
+  }
+
+  /* Navigation Components */
+  .nav-link {
+    @apply text-gray-600 hover:text-primary-500 transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply text-primary-500 font-medium;
+  }
+
+  /* Flight Search Components */
+  .search-card {
+    @apply card p-6 bg-white/90 backdrop-blur-sm border border-gray-100;
+  }
+
+  .search-input-group {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+  }
+
+  .date-picker {
+    @apply input bg-white cursor-pointer;
+  }
+
+  .passenger-select {
+    @apply input bg-white appearance-none cursor-pointer;
+  }
+
+  /* Badge Components */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success-50 text-success-600;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-50 text-warning-600;
+  }
+
+  .badge-error {
+    @apply badge bg-error-50 text-error-600;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-r from-primary-500 to-accent-500;
+  }
+
+  /* Flight Specific Utilities */
+  .flight-time {
+    @apply font-mono text-lg font-bold text-gray-900;
+  }
+
+  .flight-duration {
+    @apply text-sm text-gray-500 flex items-center space-x-1;
+  }
+
+  .flight-route {
+    @apply flex items-center space-x-3;
+  }
+
+  .airline-logo {
+    @apply w-8 h-8 object-contain rounded-full bg-gray-50 p-1;
+  }
+
+  .divider {
+    @apply h-px w-full bg-gray-200;
+  }
+
+  .truncate-2-lines {
+    @apply line-clamp-2;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-500 rounded-full hover:bg-primary-600;
+}
+
+/* Responsive Design */
+@screen sm {
+  .flight-card {
+    @apply p-6;
+  }
+  
+  .search-input-group {
+    @apply grid-cols-2;
+  }
+}
+
+@screen md {
+  .flight-grid {
+    @apply grid-cols-2;
+  }
+}
+
+@screen lg {
+  .flight-grid {
+    @apply grid-cols-3;
+  }
+  
+  .search-input-group {
+    @apply grid-cols-4;
+  }
+}

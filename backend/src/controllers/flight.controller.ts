@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { ParsedQs } from 'qs';
-import Flight from '../../models/flight.js';
 import { Op } from 'sequelize';
-
+import { ParsedQs } from 'qs';
+import { Flight } from '../models/index.js';
 
 interface FlightData {
   flightNumber: string;
@@ -175,12 +174,12 @@ export const deleteFlight = async (req: Request, res: Response): Promise<void> =
 
 export const searchFlights = async (req: FlightSearchRequest, res: Response): Promise<void> => {
   try {
-    const { departure_airport, arrival_airport, departure_time } = req.query;
+    const { departureAirport, arrivalAirport, departureTime } = req.query;
     
     const where: any = {};
-    if (departure_airport) where.departure_airport = departure_airport;
-    if (arrival_airport) where.arrival_airport = arrival_airport;
-    if (departure_time) where.departure_time = departure_time;
+    if (departureAirport) where.departureAirport = departureAirport;
+    if (arrivalAirport) where.arrivalAirport = arrivalAirport;
+    if (departureTime) where.departureTime = departureTime;
     
     const flights = await Flight.findAll({ where });
     res.json(flights);
@@ -188,11 +187,8 @@ export const searchFlights = async (req: FlightSearchRequest, res: Response): Pr
     console.error('Error searching flights:', error);
     res.status(500).json({ message: 'Error searching flights' });
   }
-}; 
+};
 
-
-
-//filter flights
 export const filterFlights = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
@@ -247,4 +243,4 @@ export const filterFlights = async (req: Request, res: Response): Promise<void> 
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
-};
+}; 

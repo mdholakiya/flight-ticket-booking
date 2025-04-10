@@ -1,20 +1,18 @@
-interface Flight {
+export interface FlightSearchParams {
+  departureCity: string;
+  arrivalCity: string;
+  departureDate: string;
+  passengers: number;
+}
+
+export interface Flight {
   id: string;
-  flightNumber: string;
   airline: string;
+  flightNumber: string;
   departureCity: string;
   arrivalCity: string;
   departureTime: string;
   arrivalTime: string;
   price: number;
   availableSeats: number;
-}
-
-export interface FlightSearchParams {
-  departureCity?: string;
-  arrivalCity?: string;
-  departureDate?: string;
-  passengers?: number;
-}
-
-export default Flight; 
+} 

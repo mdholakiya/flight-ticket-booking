@@ -22,7 +22,7 @@ interface BookingDetails {
 }
 
 export default function BookingDetailsPage() {
-  const params = useParams();
+  const { id } = useParams() as { id: string };
   const router = useRouter();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export default function BookingDetailsPage() {
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
-        const data = await bookingService.getBookingDetails(params.id as string);
+        const data = await bookingService.getBookingDetails(id);
         setBooking(data);
       } catch (err) {
         setError('Failed to load booking details.');
@@ -43,19 +43,17 @@ export default function BookingDetailsPage() {
     };
 
     fetchBookingDetails();
-  }, [params.id]);
+  }, [id]);
 
   const handlePayment = async () => {
     try {
       setProcessing(true);
-      await bookingService.processPayment(params.id as string, {
+      await bookingService.processPayment(id, {
         amount: booking?.totalAmount,
       });
-      await bookingService.confirmBooking(params.id as string);
+      await bookingService.confirmBooking(id);
       // Refresh booking details
-      const updatedBooking = await bookingService.getBookingDetails(
-        params.id as string
-      );
+      const updatedBooking = await bookingService.getBookingDetails(id);
       setBooking(updatedBooking);
     } catch (err) {
       setError('Payment processing failed. Please try again.');
@@ -68,7 +66,7 @@ export default function BookingDetailsPage() {
   const handleCancel = async () => {
     try {
       setProcessing(true);
-      await bookingService.cancelBooking(params.id as string);
+      await bookingService.cancelBooking(id);
       router.push('/flights');
     } catch (err) {
       setError('Failed to cancel booking. Please try again.');

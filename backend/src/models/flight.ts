@@ -1,19 +1,5 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-// export interface FlightAttributes {
-//   id?: number;
-//   flightNumber: string;
-//   departureAirport: string;
-//   arrivalAirport: string;
-//   departureTime: Date;
-//   arrivalTime: Date;
-//   price: number;
-//   availableSeats: number;
-//   classType: 'Economy' | 'Business Class' | 'First Class';
-//   createdAt?: Date;
-//   updatedAt?: Date;
-// }
-
 export class Flight extends Model {
   public id!: number;
   public flightNumber!: string;

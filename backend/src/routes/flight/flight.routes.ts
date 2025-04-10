@@ -6,19 +6,19 @@ import {
     createFlight,
     updateFlight,
     deleteFlight,
-    searchFlights
+    searchFlights,
+    filterFlights
 } from '../../controllers/flight/flight.controller.js';
 
 const router: Router = express.Router();
 
 // Flight routes
 router.get('/flights', getAllFlights);
+router.get('/flights/filter', filterFlights);
+router.get('/flights/search', searchFlights);
 router.get('/flights/:id', getFlightById);
 router.post('/flights', createFlight);
 router.put('/flights/:id', updateFlight);
 router.delete('/flights/:id', deleteFlight);
-
-// Search routes
-router.get('/flights/search', searchFlights);
 
 export default router; 

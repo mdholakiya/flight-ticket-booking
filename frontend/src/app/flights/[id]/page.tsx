@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { flightService } from '../../../services/flightService';
 import { bookingService } from '../../../services/bookingService';
-import Flight from '../../../types/flight';
+import { Flight } from '../../../types/flight';
 
 export default function FlightDetailsPage() {
   const params = useParams();
@@ -16,6 +16,12 @@ export default function FlightDetailsPage() {
 
   useEffect(() => {
     const fetchFlightDetails = async () => {
+      if (!params?.id) {
+        setError('Flight ID not found');
+        setLoading(false);
+        return;
+      }
+
       try {
         const data = await flightService.getFlightDetails(params.id as string);
         setFlight(data);
@@ -28,9 +34,11 @@ export default function FlightDetailsPage() {
     };
 
     fetchFlightDetails();
-  }, [params.id]);
+  }, [params?.id]);
 
   const handleBooking = async () => {
+    if (!params?.id) return;
+    
     try {
       const booking = await bookingService.createBooking(params.id as string, {
         passengers,

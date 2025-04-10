@@ -5,7 +5,7 @@ import FlightSearch from '../../components/FlightSearch';
 import FlightList from '../../components/FlightList';
 import { flightService } from '../../services/flightService';
 import { FlightSearchParams } from '../../types/flight';
-import Flight from '../../types/flight';
+import { Flight } from '../../types/flight';
 
 export default function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);

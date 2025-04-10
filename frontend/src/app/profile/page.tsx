@@ -6,27 +6,37 @@ import axios from 'axios';
 import { API_CONFIG } from '@/config/api.config';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import UpdateProfile from '@/components/UpdateProfile';
+import ResetPassword from '@/components/ResetPassword';
+import { UserCircleIcon, EnvelopeIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 
 const Profile = () => {
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const [userData, setUserData] = useState<{ name: string; email: string } | null>(null);
+  const [showUpdateProfile, setShowUpdateProfile] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setUserData(response.data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      router.push('/login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setUserData(response.data);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        router.push('/login');
-      }
-    };
-
     if (!token) {
       router.push('/');
     } else {
@@ -34,36 +44,82 @@ const Profile = () => {
     }
   }, [router, token]);
 
-  return (
-    <div className="min-h-screen">
-      
-      {/* Navbar */}
-      <nav className="bg-blue-600 text-white px-6 py-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href="/" className="text-xl font-bold">
-           Sky Journey
-          </Link>
-        </div>
-      </nav>
+  const handleProfileUpdate = async () => {
+    try {
+      setIsLoading(true);
+      await refreshUser();
+      await fetchUserProfile();
+      setShowUpdateProfile(false);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      {/* Profile Section */}
-      <div className="flex items-center bg-blue-100  justify-center py-10">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-3xl shadow-3xl">
-          <h2 className="text-3xl font-extrabold text-center text-gray-900">User Profile</h2>
-          {userData ? (
-            <div className="space-y-4">
-              <p className="text-lg text-gray-700">
-                <strong>Name:</strong> {userData.name}
-              </p>
-              <p className="text-lg text-gray-700">
-                <strong>Email:</strong> {userData.email}
-              </p>
+  if (!userData || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-950 via-sky-900 to-sky-800">
+        <div className="animate-pulse flex space-x-4">
+          <div className="rounded-full bg-slate-700 h-10 w-10"></div>
+          <div className="flex-1 space-y-6 py-1">
+            <div className="h-2 bg-slate-700 rounded"></div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="h-2 bg-slate-700 rounded col-span-2"></div>
+                <div className="h-2 bg-slate-700 rounded col-span-1"></div>
+              </div>
+              <div className="h-2 bg-slate-700 rounded"></div>
             </div>
-          ) : (
-            <p className="text-gray-500">Loading user data...</p>
-          )}
+          </div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-950 via-sky-900 to-sky-800 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto mt-10">
+        <div className="bg-white/10 backdrop-blur-lg shadow-xl rounded-2xl overflow-hidden">
+          <div className="px-6 py-8">
+            <div className="text-center">
+              <div className="inline-block p-4 rounded-full bg-blue-500/10 mb-4">
+                <UserCircleIcon className="h-20 w-20 text-blue-400" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">{userData.name}</h2>
+              <div className="flex items-center justify-center space-x-2 text-gray-300">
+                <EnvelopeIcon className="h-5 w-5" />
+                <span>{userData.email}</span>
+              </div>
+
+              <div className="mt-8 flex justify-center space-x-4">
+                <button
+                  onClick={() => setShowUpdateProfile(true)}
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                >
+                  Update Profile
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showUpdateProfile && (
+        <UpdateProfile
+          onClose={() => setShowUpdateProfile(false)}
+          onUpdate={handleProfileUpdate}
+        />
+      )}
+      {showResetPassword && (
+        <ResetPassword
+          onClose={() => setShowResetPassword(false)}
+        />
+      )}
     </div>
   );
 };

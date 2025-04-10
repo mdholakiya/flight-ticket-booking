@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config/api.config';
-import Flight, { FlightSearchParams } from '../types/flight';
+import { Flight, FlightSearchParams } from '../types/flight';
 
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
