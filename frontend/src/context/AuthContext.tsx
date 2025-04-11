@@ -19,40 +19,94 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   refreshUser: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Set up axios interceptor for adding token to requests
+  useEffect(() => {
+    const requestInterceptor = api.interceptors.request.use(
+      (config) => {
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          // Token is invalid or expired
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      // Clean up interceptors
+      api.interceptors.request.eject(requestInterceptor);
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [token]);
 
   useEffect(() => {
     // Load user data from localStorage on initial load
-    const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
-    
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
+    if (storedToken) {
       setToken(storedToken);
+      refreshUser().catch(() => {
+        // If refresh fails, clear everything
+        logout();
+      });
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGIN}`, {
+      const response = await api.post(API_CONFIG.ENDPOINTS.LOGIN, {
         email,
         password,
       });
 
-      const { user: userData, token: authToken } = response.data;
+      const { token: authToken, user: userData } = response.data;
       
-      setUser(userData);
+      if (!authToken) {
+        throw new Error('No token received from server');
+      }
+
+      // Set token first
       setToken(authToken);
-      
-      localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', authToken);
+
+      // Then set user data
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Set default authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   };
@@ -60,8 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setIsAuthenticated(false);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
   };
 
   const updateUser = (userData: Partial<User>) => {
@@ -76,38 +132,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!token) throw new Error('No token available');
 
-      const response = await axios.get(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await api.get(API_CONFIG.ENDPOINTS.PROFILE);
       const userData = response.data;
+      
       setUser(userData);
+      setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
+      console.error('Refresh user error:', error);
+      logout();
       throw error;
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
+      const response = await api.post(API_CONFIG.ENDPOINTS.REGISTER, {
         name,
         email,
         password,
       });
       return response.data;
     } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, register, updateUser, refreshUser }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        token, 
+        login, 
+        logout, 
+        register, 
+        updateUser, 
+        refreshUser,
+        isAuthenticated 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -120,3 +184,6 @@ export function useAuth() {
   }
   return context;
 }
+
+// Export the api instance for use in other parts of the app
+export { api };
