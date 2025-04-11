@@ -4,56 +4,31 @@ import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import FlightList from './components/FlightList';
-import FlightSearch from './components/FlightSearch';
+import FlightSearch from './components/Flightfilter';
 import { FlightSearchParams } from './types/flight';
+import FlightsPage from './app/flights/page';
 import '@/styles/globals.css'
-
-
 
 // Wrapper component to handle flight search
 function FlightSearchWrapper() {
   const navigate = useNavigate();
   
   const handleSearch = (params: FlightSearchParams) => {
-    // In a real app, you would fetch flights from an API
-    // For now, we'll just navigate to the flights page
-    navigate('/flights');
+    // Navigate to flights page with search params
+    navigate('/flights', { state: { searchParams: params } });
   };
   
-  return <FlightSearch onSearch={handleSearch} />;
-}
-
-// Wrapper component to handle flight list
-function FlightListWrapper() {
-  // In a real app, you would fetch flights from an API
-  // For now, we'll use dummy data
-  const dummyFlights = [
-    {
-      id: '1',
-      airline: 'AirLink',
-      flightNumber: 'AL101',
-      departureCity: 'New York',
-      arrivalCity: 'London',
-      departureTime: '10:00 AM',
-      arrivalTime: '2:00 PM',
-      price: 450,
-      availableSeats: 42
-    },
-    {
-      id: '2',
-      airline: 'SkyWings',
-      flightNumber: 'SW202',
-      departureCity: 'London',
-      arrivalCity: 'Paris',
-      departureTime: '3:30 PM',
-      arrivalTime: '5:30 PM',
-      price: 180,
-      availableSeats: 15
-    }
-  ];
-  
-  return <FlightList flights={dummyFlights} />;
+  return <FlightSearch 
+    onSearch={handleSearch}
+    searchParams={{
+      departureAirport: '',
+      arrivalAirport: '',
+      departureDate: '',
+      passengers: 1,
+      travelClass: 'Economy',
+      isRoundTrip: false
+    }}
+  />;
 }
 
 function App() {
@@ -65,7 +40,7 @@ function App() {
           <main className="min-h-screen bg-gray-50">
             <Routes>
               <Route path="/" element={<FlightSearchWrapper />} />
-              <Route path="/flights" element={<FlightListWrapper />} />
+              <Route path="/flights" element={<FlightsPage />} />
             </Routes>
           </main>
           <Footer />

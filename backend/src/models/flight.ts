@@ -1,17 +1,31 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 
-export class Flight extends Model {
-  public id!: number;
-  public flightNumber!: string;
-  public departureAirport!: string;
-  public arrivalAirport!: string;
-  public departureTime!: Date;
-  public arrivalTime!: Date;
-  public price!: number;
-  public availableSeats!: number;
-  public classType!: 'Economy' | 'Business Class' | 'First Class';
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+interface FlightAttributes {
+  id: number;
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: Date;
+  arrivalTime: Date;
+  price: number;
+  availableSeats: number;
+  classType: 'Economy' | 'Business Class' | 'First Class';
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export class Flight extends Model<FlightAttributes> implements FlightAttributes {
+  declare id: number;
+  declare flightNumber: string;
+  declare departureAirport: string;
+  declare arrivalAirport: string;
+  declare departureTime: Date;
+  declare arrivalTime: Date;
+  declare price: number;
+  declare availableSeats: number;
+  declare classType: 'Economy' | 'Business Class' | 'First Class';
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
   static initModel(sequelize: Sequelize) {
     Flight.init(

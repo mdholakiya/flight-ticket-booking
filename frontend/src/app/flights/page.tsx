@@ -1,57 +1,201 @@
 'use client';
 
-import React, { useState } from 'react';
-import FlightSearch from '../../components/FlightSearch';
-import FlightList from '../../components/FlightList';
-import { flightService } from '../../services/flightService';
-import { FlightSearchParams } from '../../types/flight';
-import { Flight } from '../../types/flight';
+import { useState, useEffect } from 'react';
+import { API_CONFIG } from '@/config/api.config';
+import axios from 'axios';
+import {
+  CalendarIcon,
+  MapPinIcon,
+  CurrencyDollarIcon,
+  UserIcon,
+  AdjustmentsHorizontalIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import { Flight } from '@/types/flight';
+
+interface FilterState {
+  priceRange: [number, number];
+  airlines: string[];
+  departureTime: string;
+  sortBy: 'price' | 'departure' | null;
+}
 
 export default function FlightsPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    priceRange: [0, 5000],
+    airlines: [],
+    departureTime: 'any',
+    sortBy: null
+  });
+  const router = useRouter();
 
-  const handleSearch = async (params: FlightSearchParams) => {
+  useEffect(() => {
+    fetchFlights();
+  }, []);
+
+  const fetchFlights = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const results = await flightService.searchFlights(params);
-      setFlights(results);
-    } catch (err) {
-      setError('Failed to search flights. Please try again.');
-      console.error('Search error:', err);
+      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.FLIGHTS}`);
+      if (response.status !== 200) throw new Error('Failed to fetch flights');
+      setFlights(response.data || []);
+    } catch (error) {
+      setError('Failed to load flights. Please try again later.');
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">Search Flights</h1>
-        
-        <FlightSearch onSearch={handleSearch} />
-        
-        {loading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-            <p className="mt-2 text-gray-600">Searching for flights...</p>
+  const handleRefresh = () => {
+    fetchFlights();
+  };
+
+  const handleFilterChange = (newFilters: Partial<FilterState>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  const filteredFlights = flights.filter(flight => {
+    if (filters.airlines.length && !filters.airlines.includes(flight.airline)) return false;
+    if (flight.price < filters.priceRange[0] || flight.price > filters.priceRange[1]) return false;
+    return true;
+  });
+
+  const sortedFlights = [...filteredFlights].sort((a, b) => {
+    switch (filters.sortBy) {
+      case 'price':
+        return a.price - b.price;
+      case 'departure':
+        return new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
+      default:
+        return 0;
+    }
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
-        )}
-        
-        {error && (
-          <div className="max-w-4xl mx-auto mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg p-4">
             {error}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">All Flights</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center px-4 py-2 text-gray-600 hover:text-primary-600 transition-colors"
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5 mr-2" />
+              Filters
+            </button>
+            <button
+              onClick={handleRefresh}
+              className="flex items-center px-4 py-2 text-gray-600 hover:text-primary-600 transition-colors"
+            >
+              <ArrowPathIcon className="h-5 w-5 mr-2" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            {/* Add your filter UI components here */}
+          </div>
         )}
-        
-        {!loading && !error && flights.length > 0 && (
-          <div className="mt-8">
-            <FlightList flights={flights} />
+
+        {/* Flight List */}
+        <div className="grid gap-6">
+          {sortedFlights.map((flight) => (
+            <div
+              key={flight.id}
+              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <div className="text-lg font-semibold text-gray-900">{flight.airline}</div>
+                  <div className="text-sm text-gray-500">Flight {flight.flightNumber}</div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center text-gray-600">
+                    <MapPinIcon className="h-5 w-5 mr-2" />
+                    <span>{flight.departureAirport}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <CalendarIcon className="h-5 w-5 mr-2" />
+                    <span>{new Date(flight.departureTime).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center text-gray-600">
+                    <MapPinIcon className="h-5 w-5 mr-2" />
+                    <span>{flight.arrivalAirport}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <CalendarIcon className="h-5 w-5 mr-2" />
+                    <span>{new Date(flight.arrivalTime).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center text-gray-600">
+                      <CurrencyDollarIcon className="h-5 w-5 mr-2" />
+                      <span className="text-lg font-semibold">${flight.price}</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <UserIcon className="h-5 w-5 mr-2" />
+                      <span>{flight.availableSeats} seats left</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/flights/${flight.id}/booking`)}
+                    className="mt-4 w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+                  >
+                    Book Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {sortedFlights.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No flights found matching your criteria.</p>
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 } 

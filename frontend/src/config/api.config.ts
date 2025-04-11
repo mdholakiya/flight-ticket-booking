@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/api/v1',
+  BASE_URL: 'http://localhost:8080/api/api/v1',
   ENDPOINTS: {
     // Auth
     LOGIN: '/auth/login',
@@ -13,17 +13,18 @@ export const API_CONFIG = {
     RESET_PASSWORD: '/users/change-password',
     
     // Flights
-    FLIGHTS: '/flights',
-    SEARCH_FLIGHTS: '/flights/search',
-    FLIGHT_DETAILS: (id: string) => `/flights/${id}`,
+    FLIGHTS: '/flights/flights',
+    SEARCH_FLIGHTS: '/flights/flights/search',
+    FILTER_FLIGHTS: '/flights/flights/filter',
+    FLIGHT_DETAILS: (id: string) => `/flights/flights/${id}`,
     
     // Bookings
     BOOKINGS: '/bookings',
-    USER_BOOKINGS: (userId: string) => `/bookings/user/${userId}`,
-    BOOKING_DETAILS: (id: string) => `/bookings/${id}`,
-    CANCEL_BOOKING: (id: string) => `/bookings/${id}`,
-    PROCESS_PAYMENT: (id: string) => `/bookings/${id}/payment`,
-    CONFIRM_BOOKING: (id: string) => `/bookings/${id}/confirm`,
+    USER_BOOKINGS: (userId: string) => `bookings/bookings/${userId}`,
+    BOOKING_DETAILS: (id: string) => `/bookings/bookings/${id}`,
+    CANCEL_BOOKING: (id: string) => `/bookings/bookings/${id}`,
+    PROCESS_PAYMENT: (id: string) => `/bookings/bookings/${id}/payment`,
+    CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
   },
   TOKEN_KEY: 'flight_booking_token',
 }; 

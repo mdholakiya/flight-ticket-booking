@@ -1,109 +1,63 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import { API_CONFIG } from '@/config/api.config';
+import axios from 'axios';
 import {
-  CalendarIcon, MapPinIcon, UserIcon, ChevronUpIcon, ChevronDownIcon, ArrowPathIcon,
-  PhoneIcon, EnvelopeIcon, MapIcon, GlobeAltIcon, ShieldCheckIcon, CreditCardIcon,
-  ArrowRightIcon, StarIcon, TicketIcon
+  CalendarIcon, MapPinIcon, UserIcon, ChevronUpIcon, ChevronDownIcon,
+  PhoneIcon, EnvelopeIcon, MapIcon, ArrowRightIcon
 } from '@heroicons/react/24/outline';
-
-// Define interfaces
-interface Flight {
-  id: string;
-  details: string;
-}
-
-interface Location {
-  id: string;
-  city: string;
-  airport: string;
-  code: string;
-}
+import FlightList from '@/components/FlightList';
+import FlightFilter from '@/components/Flightfilter';
+import { Flight, FlightSearchParams } from '@/types/flight';
 
 export default function Home() {
-  const [fromLocation, setFromLocation] = useState('');
-  const [toLocation, setToLocation] = useState('');
-  const [fromSuggestions, setFromSuggestions] = useState<Location[]>([]);
-  const [toSuggestions, setToSuggestions] = useState<Location[]>([]);
-  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
-  const [showToSuggestions, setShowToSuggestions] = useState(false);
-  const [departureDate, setDepartureDate] = useState('');
-  const [returnDate, setReturnDate] = useState('');
+  // Form states
+  const [departureAirport, setDepartureAirport] = useState('');
+  const [arrivalAirport, setArrivalAirport] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
-  const [travelClass, setTravelClass] = useState('Any');
+  const [travelClass, setTravelClass] = useState('Economy');
   const [isOneWay, setIsOneWay] = useState(false);
+
+  // UI states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [flights, setFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<{ flights: Flight[] }>({ flights: [] });
+  const [error, setError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState(false);
+  const [departureDate, setDepartureDate] = useState('');
+  const [arrivalDate, setArrivalDate] = useState('');
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
-  // Function to fetch location suggestions
-  const fetchLocationSuggestions = async (query: string, type: 'from' | 'to') => {
-    if (query.length < 2) {
-      type === 'from' ? setFromSuggestions([]) : setToSuggestions([]);
-      return;
-    }
-
+  const handleSearch = async (params: FlightSearchParams) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/locations/search?query=${query}`);
-      if (!response.ok) throw new Error('Failed to fetch suggestions');
-      const data = await response.json();
+      setError(null);
+      setLoading(true);
+      setSearchPerformed(true);
       
-      if (type === 'from') {
-        setFromSuggestions(data);
-        setShowFromSuggestions(true);
-      } else {
-        setToSuggestions(data);
-        setShowToSuggestions(true);
+      // Call API with search params
+      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.FILTER_FLIGHTS}`, {
+        params
+      });
+      
+      const flightsArray = response.data?.data || [];
+      setData({ flights: flightsArray });
+      
+      if (flightsArray.length === 0) {
+        setError('No flights found for your search criteria. Please try different dates or routes.');
       }
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
-    }
-  };
-
-  // Handle location selection
-  const handleLocationSelect = (location: Location, type: 'from' | 'to') => {
-    if (type === 'from') {
-      setFromLocation(`${location.city} (${location.code})`);
-      setShowFromSuggestions(false);
-    } else {
-      setToLocation(`${location.city} (${location.code})`);
-      setShowToSuggestions(false);
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const searchParams = new URLSearchParams({
-        fromLocation,
-        toLocation,
-        departureDate,
-        adults: adults.toString(),
-        children: children.toString(),
-        travelClass,
-        isOneWay: isOneWay.toString()
-      });
-
-      if (!isOneWay && returnDate) {
-        searchParams.append('returnDate', returnDate);
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/flights/filter?${searchParams.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch flights');
-      }
-
-      const data = await response.json();
-      setFlights(data);
-    } catch (error) {
-      console.error('Error fetching flights:', error);
+      console.error('Error searching flights:', error);
+      setError('Failed to search flights. Please try again.');
+      setData({ flights: [] });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,29 +77,84 @@ export default function Home() {
     }
   };
 
+  const handleDateChange = (type: 'departure' | 'arrival', date: string) => {
+    if (type === 'departure') {
+      setDepartureDate(date);
+      // Reset arrival date if it's before the new departure date
+      if (arrivalDate && new Date(arrivalDate) < new Date(date)) {
+        setArrivalDate('');
+      }
+    } else {
+      setArrivalDate(date);
+    }
+  };
+
+  const fetchFlightDetails = async (flightId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, use mock data since API is not available
+      // In a real application, you would uncomment this:
+      /*
+      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.FLIGHT_DETAILS}/${flightId}`);
+      
+      if (response.status !== 200) {
+        throw new Error('Failed to fetch flight details');
+      }
+      
+      setSelectedFlight(response.data);
+      */
+      
+      // Mock data for testing
+      const mockFlight = {
+        id: flightId,
+        airline: "Emirates",
+        flightNumber: "EK123",
+        departureAirport: departureAirport || "New York (JFK)",
+        arrivalAirport: arrivalAirport || "London (LHR)",
+        departureTime: departureDate || "2024-03-20T10:00:00",
+        arrivalTime: arrivalDate || "2024-03-20T22:00:00",
+        price: 750,
+        availableSeats: 42,
+        duration: "12h 0m"
+      };
+      
+      setSelectedFlight(mockFlight);
+      setShowBookingModal(true);
+      
+    } catch (error) {
+      console.error('Error fetching flight details:', error);
+      setError('Failed to fetch flight details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Navbar */}
-      <nav className="bg-white/80 backdrop-blur-md shadow-sm">
+      <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                SkyJourney
-              </div>
+              <div className="text-2xl font-bold text-blue-600">SkyJourney</div>
               <div className="hidden md:flex space-x-6">
                 <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">Home</Link>
-                <Link href="/book-flight" className="text-gray-700 hover:text-blue-600 transition-colors">Book Flight</Link>
-                <Link href="/flight-management" className="text-gray-700 hover:text-blue-600 transition-colors">Manage Bookings</Link>
+                <Link href="/flights" className="text-gray-700 hover:text-blue-600 transition-colors">Flights</Link>
+                <Link href="/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">My Bookings</Link>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
-                <UserIcon className="h-6 w-6 text-gray-700 hover:text-blue-600 transition-colors" />
+                <button className="flex items-center space-x-2 text-gray-700 hover:text-blue-600">
+                  <UserIcon className="h-6 w-6" />
+                  <span>Profile</span>
+                </button>
               ) : (
                 <>
-                  <Link href="/login" className="text-gray-700 hover:text-blue-600 transition-colors">Login</Link>
-                  <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                  <Link href="/login" className="text-gray-700 hover:text-blue-600">Login</Link>
+                  <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     Sign Up
                   </Link>
                 </>
@@ -155,311 +164,229 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-blue-600 to-indigo-600 py-16">
+        <section className="bg-gradient-to-r from-blue-600 to-indigo-600 py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                Your Journey Begins Here
+                Find Your Perfect Flight
               </h1>
+              <p className="text-xl text-blue-100">
+                Search, compare, and book flights to anywhere in the world
+              </p>
             </div>
           </div>
         </section>
 
         {/* Search Form Section */}
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            <form onSubmit={handleSearch} className="space-y-6">
-              {/* Trip Type Toggle */}
-              <div className="flex justify-center space-x-4 mb-6">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            {/* Trip Type Toggle */}
+            <div className="mb-6">
+              <div className="flex justify-center space-x-4">
                 <button
                   type="button"
-                  onClick={() => setIsOneWay(false)}
-                  className={`px-6 py-2 rounded-full transition-colors ${!isOneWay ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={() => setIsRoundTrip(true)}
+                  className={`px-6 py-2 rounded-full transition-colors ${
+                    isRoundTrip ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
                 >
                   Round Trip
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsOneWay(true)}
-                  className={`px-6 py-2 rounded-full transition-colors ${isOneWay ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={() => setIsRoundTrip(false)}
+                  className={`px-6 py-2 rounded-full transition-colors ${
+                    !isRoundTrip ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
                 >
                   One Way
                 </button>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* From Location */}
+            {/* Date Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  DEPARTURE DATE
+                </label>
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">FROM</label>
-                  <div className="relative">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Enter departure city"
-                      className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={fromLocation}
-                      onChange={(e) => {
-                        setFromLocation(e.target.value);
-                        fetchLocationSuggestions(e.target.value, 'from');
-                      }}
-                      onFocus={() => setShowFromSuggestions(true)}
-                    />
-                    {/* From Suggestions Dropdown */}
-                    {showFromSuggestions && fromSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                        {fromSuggestions.map((location) => (
-                          <div
-                            key={location.id}
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            onClick={() => handleLocationSelect(location, 'from')}
-                          >
-                            <div className="font-medium">{location.city}</div>
-                            <div className="text-sm text-gray-500">{location.airport} ({location.code})</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <input
+                    type="date"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={departureDate}
+                    onChange={(e) => handleDateChange('departure', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
                 </div>
+              </div>
 
-                {/* To Location */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">TO</label>
-                  <div className="relative">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Enter destination city"
-                      className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={toLocation}
-                      onChange={(e) => {
-                        setToLocation(e.target.value);
-                        fetchLocationSuggestions(e.target.value, 'to');
-                      }}
-                      onFocus={() => setShowToSuggestions(true)}
-                    />
-                    {/* To Suggestions Dropdown */}
-                    {showToSuggestions && toSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                        {toSuggestions.map((location) => (
-                          <div
-                            key={location.id}
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            onClick={() => handleLocationSelect(location, 'to')}
-                          >
-                            <div className="font-medium">{location.city}</div>
-                            <div className="text-sm text-gray-500">{location.airport} ({location.code})</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Departure Date */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">DEPARTURE</label>
+              {isRoundTrip && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    RETURN DATE
+                  </label>
                   <div className="relative">
                     <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <input
                       type="date"
-                      className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={departureDate}
-                      onChange={(e) => setDepartureDate(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={arrivalDate}
+                      onChange={(e) => handleDateChange('arrival', e.target.value)}
+                      min={departureDate || new Date().toISOString().split('T')[0]}
+                      required={isRoundTrip}
                     />
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Return Date */}
-                {!isOneWay && (
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">RETURN</label>
-                    <div className="relative">
-                      <CalendarIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <input
-                        type="date"
-                        className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
+            {/* Travel Class Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                TRAVEL CLASS
+              </label>
+              <select
+                value={travelClass}
+                onChange={(e) => setTravelClass(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="Economy">Economy</option>
+                <option value="Business">Business</option>
+                <option value="First">First Class</option>
+              </select>
+            </div>
+
+            {/* From, To, Passengers Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="space-y-2 col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  From
+                </label>
+                <input
+                  type="text"
+                  value={departureAirport}
+                  onChange={(e) => setDepartureAirport(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Departure City"
+                />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {/* Adults */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ADULTS</label>
-                  <div className="flex items-center">
-                    <div className="relative flex-1">
-                      <UserIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <input
-                        type="text"
-                        className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={adults}
-                        readOnly
-                      />
-                    </div>
-                    <div className="ml-2 flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => incrementCount('adults')}
-                        className="text-gray-500 hover:text-blue-500 transition-colors"
-                      >
-                        <ChevronUpIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => decrementCount('adults')}
-                        className="text-gray-500 hover:text-blue-500 transition-colors"
-                      >
-                        <ChevronDownIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Children */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CHILDREN</label>
-                  <div className="flex items-center">
-                    <div className="relative flex-1">
-                      <UserIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                      <input
-                        type="text"
-                        className="w-full pl-10 rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={children}
-                        readOnly
-                      />
-                    </div>
-                    <div className="ml-2 flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => incrementCount('children')}
-                        className="text-gray-500 hover:text-blue-500 transition-colors"
-                      >
-                        <ChevronUpIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => decrementCount('children')}
-                        className="text-gray-500 hover:text-blue-500 transition-colors"
-                      >
-                        <ChevronDownIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Travel Class */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CLASS</label>
-                  <select
-                    value={travelClass}
-                    onChange={(e) => setTravelClass(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Any">Any Class</option>
-                    <option value="Economy">Economy</option>
-                    <option value="Business">Business</option>
-                    <option value="First">First Class</option>
-                  </select>
-                </div>
+              <div className="space-y-2 col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  To
+                </label>
+                <input
+                  type="text"
+                  value={arrivalAirport}
+                  onChange={(e) => setArrivalAirport(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Arrival City"
+                />
               </div>
 
-              {/* Search Button */}
-              <div className="flex justify-center pt-4">
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
-                >
-                  Search Flights
-                </button>
+              <div className="space-y-2 col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Passengers
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={adults + children}
+                  onChange={(e) => {
+                    const total = parseInt(e.target.value);
+                    if (total >= 1) {
+                      setAdults(Math.min(total, 9));
+                      setChildren(Math.max(0, total - adults));
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-            </form>
+            </div>
+                
+            <FlightFilter 
+              onSearch={handleSearch} 
+              searchParams={{
+                departureAirport,
+                arrivalAirport,
+                departureDate,
+                arrivalDate,
+                passengers: adults + children,
+                travelClass,
+                isRoundTrip
+              }}
+  
+            />
           </div>
         </section>
+
+        {/* Flight Results Section */}
+        {searchPerformed && (
+          <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <FlightList 
+              flights={data?.flights || []} 
+              loading={loading} 
+              onFlightSelect={fetchFlightDetails}
+            />
+          </section>
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <footer className="bg-gray-900 text-white mt-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
             <div>
-              <h3 className="text-lg font-bold mb-2 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                SkyJourney
-              </h3>
-              <p className="text-gray-400 text-sm mb-2">Making travel dreams come true since 2024.</p>
-              <div className="flex space-x-3">
-                {['Facebook', 'Twitter', 'Instagram', 'LinkedIn'].map((social) => (
-                  <a key={social} href="#" className="text-gray-400 hover:text-white transition-colors text-sm">
-                    {social}
-                  </a>
-                ))}
+              <h3 className="text-lg font-bold text-blue-400 mb-4">SkyJourney</h3>
+              <p className="text-gray-400">Making travel dreams come true since 2024.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li><Link href="/" className="text-gray-400 hover:text-white">Home</Link></li>
+                <li><Link href="/flights" className="text-gray-400 hover:text-white">Flights</Link></li>
+                <li><Link href="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
+                <li><Link href="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Contact Us</h4>
+              <ul className="space-y-2">
+                <li className="flex items-center text-gray-400">
+                  <PhoneIcon className="h-4 w-4 mr-2" />
+                  +1 (555) 123-4567
+                </li>
+                <li className="flex items-center text-gray-400">
+                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                  support@skyjourney.com
+                </li>
+                <li className="flex items-center text-gray-400">
+                  <MapIcon className="h-4 w-4 mr-2" />
+                  123 Aviation Way, NY
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Follow Us</h4>
+              <div className="flex space-x-4">
+                <a href="#" className="text-gray-400 hover:text-white">Twitter</a>
+                <a href="#" className="text-gray-400 hover:text-white">Facebook</a>
+                <a href="#" className="text-gray-400 hover:text-white">Instagram</a>
               </div>
             </div>
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="text-base font-semibold mb-2 text-white">Quick Links</h3>
-              <ul className="space-y-1">
-                {['Home', 'About Us', 'Flights', 'Destinations', 'Contact'].map((link) => (
-                  <li key={link}>
-                    <Link href="#" className="text-gray-400 hover:text-white transition-colors flex items-center text-sm">
-                      <ArrowRightIcon className="h-3 w-3 mr-1" />
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Support */}
-            <div>
-              <h3 className="text-base font-semibold mb-2 text-white">Support</h3>
-              <ul className="space-y-1">
-                {['Help Center', 'FAQs', 'Terms & Conditions', 'Privacy Policy', 'Refund Policy'].map((item) => (
-                  <li key={item}>
-                    <Link href="#" className="text-gray-400 hover:text-white transition-colors flex items-center text-sm">
-                      <ArrowRightIcon className="h-3 w-3 mr-1" />
-                      {item}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h3 className="text-base font-semibold mb-2 text-white">Contact Us</h3>
-              <ul className="space-y-1">
-                <li className="flex items-center">
-                  <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-400 text-sm">+1 (555) 123-4567</span>
-                </li>
-                <li className="flex items-center">
-                  <EnvelopeIcon className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-400 text-sm">support@skyjourney.com</span>
-                </li>
-                <li className="flex items-center">
-                  <MapIcon className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-400 text-sm">123 Aviation Way, NY</span>
-                </li>
-              </ul>
-            </div>
           </div>
-        </div>
-        <div className="border-t border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <p className="text-center text-gray-400 text-sm">
-              &copy; 2024 SkyJourney. All rights reserved.
-            </p>
-          </div>
+         
         </div>
       </footer>
     </div>

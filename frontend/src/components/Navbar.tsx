@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import UpdateProfile from './UpdateProfile';
 import ResetPassword from './ResetPassword';
+import FlightSearch from './Flightfilter';
+
 
 export default function Navbar() {
   const { user, logout, refreshUser } = useAuth();
@@ -69,7 +71,10 @@ export default function Navbar() {
               <Link href="/" className="text-gray-700 hover:text-primary-600 transition-colors">
                 Home
               </Link>
-              <Link href="/flights" className="text-gray-700 hover:text-primary-600 transition-colors">
+              <Link 
+                href="/flights" 
+                className="text-gray-700 hover:text-primary-600 transition-colors"
+              >
                 Flights
               </Link>
               <Link href="/bookings" className="text-gray-700 hover:text-primary-600 transition-colors">
@@ -185,7 +190,10 @@ export default function Navbar() {
             <Link href="/" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
               Home
             </Link>
-            <Link href="/flights" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+            <Link 
+              href="/flights" 
+              className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg"
+            >
               Flights
             </Link>
             <Link href="/bookings" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg">

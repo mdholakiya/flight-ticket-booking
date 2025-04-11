@@ -3,6 +3,16 @@ import { ParsedQs } from 'qs';
 import Flight from '../../models/flight.js';
 import { Op } from 'sequelize';
 
+interface CreateFlightData {
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: Date;
+  arrivalTime: Date;
+  price: number;
+  availableSeats: number;
+  classType: 'Economy' | 'Business Class' | 'First Class';
+}
 
 interface FlightData {
   flightNumber: string;
@@ -13,7 +23,7 @@ interface FlightData {
   price: number;
   availableSeats: number;
   classType: 'Economy' | 'Business Class' | 'First Class';
-  [key: string]: any;
+
 }
 
 interface FlightSearchQuery extends ParsedQs {
@@ -112,7 +122,6 @@ export const createFlight = async (req: Request, res: Response): Promise<void> =
       res.status(400).json({ message: 'Invalid class type' });
       return;
     }
-
     const flight = await Flight.create({
       flightNumber,
       departureAirport,
@@ -122,7 +131,7 @@ export const createFlight = async (req: Request, res: Response): Promise<void> =
       price,
       availableSeats,
       classType
-    });
+    } as any);
 
     console.log('Flight created:', flight);
     res.status(201).json(flight);
@@ -192,9 +201,11 @@ export const searchFlights = async (req: FlightSearchRequest, res: Response): Pr
 
 
 
-//filter flights
+// import { Op } from 'sequelize';
+
 export const filterFlights = async (req: Request, res: Response): Promise<void> => {
   try {
+  
     const {
       departureAirport,
       arrivalAirport,
@@ -202,34 +213,43 @@ export const filterFlights = async (req: Request, res: Response): Promise<void> 
       arrivalTime,
     } = req.query;
 
-    // Build filter conditions
     const whereClause: any = {};
 
-    if (departureAirport) {
-      whereClause.departureAirport = departureAirport;
-    }
+    // Filter by departureAirport & arrivalAirport together
+    if (departureAirport && arrivalAirport) {
+      whereClause[Op.and] = [
+        { departureAirport: departureAirport },
+        { arrivalAirport: arrivalAirport },
+      ];
+    } else {
+      if (departureAirport) {
+        whereClause.departureAirport = departureAirport;
+      }
 
-    if (arrivalAirport) {
-      whereClause.arrivalAirport = arrivalAirport;
+      if (arrivalAirport) {
+        whereClause.arrivalAirport = arrivalAirport;
+      }
     }
-
+console.log('departureAirport-----------------', departureAirport);
+   
     if (departureTime) {
       const departureDate = new Date(departureTime as string);
+      if (isNaN(departureDate.getTime())) {
+        throw new Error('Invalid Departure Date');
+      }
+
       whereClause.departureTime = {
         [Op.gte]: departureDate,
-        [Op.lt]: new Date(departureDate.getTime() + 24 * 60 * 60 * 1000), // Next 24 hours
       };
     }
 
     if (arrivalTime) {
       const arrivalDate = new Date(arrivalTime as string);
-      whereClause.arrivalTime = {
-        [Op.gte]: arrivalDate,
-        [Op.lt]: new Date(arrivalDate.getTime() + 24 * 60 * 60 * 1000), // Next 24 hours
-      };
+      if (isNaN(arrivalDate.getTime())) {
+        throw new Error('Invalid Arrival Date');
+      }
     }
 
-    // Find flights matching the criteria
     const flights = await Flight.findAll({
       where: whereClause,
       order: [['departureTime', 'ASC']],
@@ -239,6 +259,7 @@ export const filterFlights = async (req: Request, res: Response): Promise<void> 
       success: true,
       data: flights,
     });
+    console.log(' filtered flights-----------------', flights);
   } catch (error) {
     console.error('Error filtering flights:', error);
     res.status(500).json({
