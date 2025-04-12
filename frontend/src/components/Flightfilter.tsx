@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FlightSearchParams, Flight } from '../types/flight';
 import axios from 'axios';
 import { API_CONFIG } from '@/config/api.config';
+import { flightService } from '@/services/flightService';
 
 interface FlightFilterProps {
   onSearch: (params: FlightSearchParams) => void;

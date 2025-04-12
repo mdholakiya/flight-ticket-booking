@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import UpdateProfile from '@/components/UpdateProfile';
 import ResetPassword from '@/components/ResetPassword';
+import { userService } from '@/services/userService';
 import { UserCircleIcon, EnvelopeIcon, KeyIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
@@ -28,6 +29,10 @@ const Profile = () => {
         },
       });
       setUserData(response.data);
+
+      // const response = await userService.getProfile();
+      
+   
     } catch (error) {
       console.error('Error fetching user profile:', error);
       router.push('/login');
