@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { API_CONFIG } from '@/config/api.config';
+import { bookingService } from '@/services/bookingService';
+import { flightService } from '@/services/flightService';
 import {
   CalendarIcon,
   ClockIcon,
@@ -31,6 +33,16 @@ interface PassengerInfo {
   email: string;
   phone: string;
   type: 'adult' | 'child';
+}
+
+interface BookingResponse {
+  bookingId: string;
+  // Add other response fields if needed
+}
+
+interface APIResponse<T> {
+  ok: boolean;
+  json(): Promise<T>;
 }
 
 export default function FlightBookingPage() {
@@ -65,9 +77,7 @@ export default function FlightBookingPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}${API_CONFIG.ENDPOINTS.FLIGHT_DETAILS(params.id as string)}`
-      );
+      const response = await flightService.getFlightDetails(params.id as string);
       if (!response.ok) throw new Error('Failed to fetch flight details');
       const data = await response.json();
       setFlight(data.data);
@@ -103,17 +113,10 @@ export default function FlightBookingPage() {
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${API_CONFIG.ENDPOINTS.BOOKINGS}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          flightId: flight?.id,
-          passengers,
-          paymentDetails
-        }),
-      });
+      const response = await bookingService.createBooking(flight?.id!, {
+        passengers,
+        paymentDetails
+      }) as APIResponse<BookingResponse>;
 
       if (!response.ok) throw new Error('Failed to create booking');
 

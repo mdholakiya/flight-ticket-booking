@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { API_CONFIG } from '@/config/api.config';
+import { bookingService } from '@/services/bookingService';
 import axios from 'axios';
 import {
   CalendarIcon,
@@ -13,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import { Flight } from '@/types/flight';
+import { flightService } from '@/services/flightService';
 
 interface FilterState {
   priceRange: [number, number];
@@ -41,9 +43,8 @@ export default function FlightsPage() {
   const fetchFlights = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.FLIGHTS}`);
-      if (response.status !== 200) throw new Error('Failed to fetch flights');
-      setFlights(response.data || []);
+      const response = await flightService.getAllFlights();
+      setFlights(response);
     } catch (error) {
       setError('Failed to load flights. Please try again later.');
       console.error('Error:', error);

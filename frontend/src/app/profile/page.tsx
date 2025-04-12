@@ -20,6 +20,24 @@ const Profile = () => {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    const checkAuthAndFetchProfile = async () => {
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+
+      try {
+        await fetchUserProfile();
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+        router.replace('/login');
+      }
+    };
+
+    checkAuthAndFetchProfile();
+  }, [token, router]);
+
   const fetchUserProfile = async () => {
     try {
       setIsLoading(true);
@@ -28,26 +46,19 @@ const Profile = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setUserData(response.data);
-
-      // const response = await userService.getProfile();
       
-   
+      if (response.data) {
+        setUserData(response.data);
+      } else {
+        throw new Error('No profile data received');
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      router.push('/login');
+      router.replace('/login');
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!token) {
-      router.push('/');
-    } else {
-      fetchUserProfile();
-    }
-  }, [router, token]);
 
   const handleProfileUpdate = async () => {
     try {

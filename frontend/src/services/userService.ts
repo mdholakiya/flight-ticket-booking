@@ -16,31 +16,33 @@ const api = axios.create({
 });
 
 class UserService {
+ 
+
+  async getProfile(): Promise<User> {
+    const response = await api.get( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.PROFILE);
+    return response.data;
+  }
+
   async getCurrentUser(): Promise<User | null> {
     try {
-      const response = await api.get(API_CONFIG.ENDPOINTS.CURRENT_USER);
-      return response.data;
+      const response = await this.getProfile();
+      return response;
     } catch (error) {
       return null;
     }
   }
 
-  async getProfile(): Promise<User> {
-    const response = await api.get( API_CONFIG.ENDPOINTS.PROFILE);
-    return response.data;
-  }
-
   async checkUserExists(email: string): Promise<boolean> {
     try {
-      const response = await api.post(API_CONFIG.ENDPOINTS.CHECK_USER, { email });
-      return response.data.exists;
+      const response = await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGIN, { email });
+      return true;
     } catch (error) {
       return false;
     }
   }
 
   async login(email: string, password: string): Promise<User> {
-    const response = await api.post( API_CONFIG.ENDPOINTS.LOGIN, {
+    const response = await api.post( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGIN, {
       email,
       password
     });
@@ -48,12 +50,12 @@ class UserService {
   }
 
   async register(userData: { name: string; email: string; password: string; phone?: string }): Promise<User> {
-    const response = await api.post(API_CONFIG.ENDPOINTS.REGISTER, userData);
+    const response = await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.REGISTER, userData);
     return response.data;
   }
 
   async logout(): Promise<void> {
-    await api.post( API_CONFIG.ENDPOINTS.LOGOUT);
+    await api.post( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGOUT);
   }
 }
 

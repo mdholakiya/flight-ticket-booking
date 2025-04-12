@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 // import LoginPage from '../login/page';
+import { userService } from '@/services/userService';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');

@@ -5,16 +5,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { API_CONFIG } from '@/config/api.config'; // Update path based on your project structure
+import { API_CONFIG } from '@/config/api.config'; // Update path based on your project structur
+import { userService } from '@/services/userService';
 import axios from 'axios';
 
 export const fetchUserData = async () => {
-  const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem(API_CONFIG.TOKEN_KEY)}`,  // Pass token if required
-    },
-  });
-  return response.data;
+  const response = await userService.getProfile();
+  return response;
 };
 
 console.log("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
@@ -30,8 +27,8 @@ export default function LoginPage() {
   // If user is already authenticated, redirect them
   useEffect(() => {
     if (isAuthenticated) {
-      const redirect = searchParams?.get('redirect') || '/profile';
-      router.push(redirect);
+      // const redirect = searchParams?.get('redirect') || '/profile';
+      router.push('/profile');
     }
   }, [isAuthenticated, router, searchParams]);
 
@@ -42,10 +39,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast.success('Login successful!');
-      
-      // Get redirect URL from query params or default to profile
-      const redirect = searchParams?.get('redirect') || '/profile';
-      router.push(redirect);
+      router.replace('/profile'); // Using replace instead of push to avoid back button issues
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.response?.data?.message || 'Invalid email or password');
@@ -53,6 +47,16 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Remove or modify the useEffect that's causing double redirection
+  useEffect(() => {
+    if (isAuthenticated && router) {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/login') {
+        router.replace('/profile');
+      }
+    }
+  }, [isAuthenticated, router]);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-sky-950 via-sky-900 to-sky-800">

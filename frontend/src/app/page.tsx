@@ -11,6 +11,7 @@ import {
 import FlightList from '@/components/FlightList';
 import FlightFilter from '@/components/Flightfilter';
 import { Flight, FlightSearchParams } from '@/types/flight';
+import { flightService } from '@/services/flightService';
 
 export default function Home() {
   // Form states
@@ -42,14 +43,12 @@ export default function Home() {
       setSearchPerformed(true);
       
       // Call API with search params
-      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.FILTER_FLIGHTS}`, {
-        params
-      });
+      const response = await flightService.filterFlights(params);
       
-      const flightsArray = response.data?.data || [];
-      setData({ flights: flightsArray });
-      
-      if (flightsArray.length === 0) {
+      // const flightsArray = response.data?.data || [];
+      // setData({ flights: flightsArray });
+      setData(response);
+      if (response.length === 0) {
         setError('No flights found for your search criteria. Please try different dates or routes.');
       }
     } catch (error) {
@@ -315,7 +314,8 @@ export default function Home() {
                 />
               </div>
             </div>
-                
+                 
+
             <FlightFilter 
               onSearch={handleSearch} 
               searchParams={{
