@@ -3,6 +3,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 interface FlightAttributes {
   id: number;
   flightNumber: string;
+  flightName?: string;
   departureAirport: string;
   arrivalAirport: string;
   departureTime: Date;
@@ -17,6 +18,7 @@ interface FlightAttributes {
 export class Flight extends Model<FlightAttributes> implements FlightAttributes {
   declare id: number;
   declare flightNumber: string;
+  declare flightName: string;
   declare departureAirport: string;
   declare arrivalAirport: string;
   declare departureTime: Date;
@@ -39,6 +41,10 @@ export class Flight extends Model<FlightAttributes> implements FlightAttributes 
           type: DataTypes.STRING,
           allowNull: false,
           unique: true
+        },
+        flightName: {
+          type: DataTypes.STRING,
+          allowNull: false, // match what you did in migration
         },
         departureAirport: {
           type: DataTypes.STRING,

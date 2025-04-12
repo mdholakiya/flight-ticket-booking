@@ -38,13 +38,26 @@ export const bookingService = {
     return response.data;
   },
 
-  processPayment: async (id: string, paymentDetails: any) => {
-    const response = await api.post(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.PROCESS_PAYMENT(id), paymentDetails);
+  processPayment: async (bookingId: string, paymentData: any) => {
+    const response = await api.post(
+      `${API_CONFIG.BASE_URL}/bookings/bookings/${bookingId}/payment`,
+      paymentData
+    );
     return response.data;
   },
 
   confirmBooking: async (id: string) => {
-    const response = await api.post(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.CONFIRM_BOOKING(id));
+    const response = await api.post(
+      `${API_CONFIG.BASE_URL}/bookings/bookings/${id}/confirm`
+    );
+    return response.data;
+  },
+
+  createPaymentIntent: async (bookingId: string, amount: number) => {
+    const response = await api.post(
+      `${API_CONFIG.BASE_URL}/bookings/bookings/${bookingId}/payment-intent`,
+      { amount }
+    );
     return response.data;
   },
 }; 

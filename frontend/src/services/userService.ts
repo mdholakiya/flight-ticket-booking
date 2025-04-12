@@ -18,6 +18,11 @@ class UserService {
     }
   }
 
+  async getProfile(): Promise<User> {
+    const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`);
+    return response.data;
+  }
+
   async checkUserExists(email: string): Promise<boolean> {
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CHECK_USER}`, { email });

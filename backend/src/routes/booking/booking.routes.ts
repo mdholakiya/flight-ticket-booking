@@ -6,7 +6,7 @@ import {
     updateBooking,
     cancelBooking,
     getUserBookings,
-    processPayment,
+    // processPayment,
     confirmBooking
 } from '../../controllers/booking/booking.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
@@ -28,7 +28,7 @@ router.delete('/bookings/:id', cancelBooking as RequestHandler);
 router.get('/bookings', getUserBookings as RequestHandler);
 
 // Booking payment and confirmation
-router.post('/bookings/:id/payment', processPayment as RequestHandler);
+// router.post('/bookings/:id/payment', processPayment as RequestHandler);
 router.post('/bookings/:id/confirm', confirmBooking as RequestHandler);
 
 export default router; 

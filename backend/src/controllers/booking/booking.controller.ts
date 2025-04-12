@@ -2,6 +2,16 @@ import { Request, Response } from 'express';
 import Booking from '../../models/booking.js';
 import Flight from '../../models/flight.js';
 
+interface CreateBookingBody {
+  flightId: number;
+  passengerName: string;
+  passengerEmail: string;
+  numberOfSeats: number;
+  totalPrice: number;
+  status?: 'pending' | 'confirmed' | 'cancelled';
+  classType?: 'Economy' | 'Business Class' | 'First Class';
+}
+
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const { 
@@ -10,8 +20,9 @@ export const createBooking = async (req: Request, res: Response) => {
       passengerEmail, 
       numberOfSeats, 
       totalPrice, 
-      status 
-    } = req.body;
+      status,
+      classType = 'Economy'
+    } = req.body as CreateBookingBody;
     
     const userId = req.user?.id;
     
@@ -34,14 +45,15 @@ export const createBooking = async (req: Request, res: Response) => {
       passengerEmail,
       numberOfSeats,
       totalPrice,
-      status: status || 'pending'
-    });
+      status: status || 'pending',
+      classType,
+      flightName: flight.flightName || `Flight ${flight.flightNumber}`
+    } as unknown as Booking);
 
     console.log('Booking created:', booking);
     res.status(201).json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);
-    // Use type guard to check if error is an instance of Error
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ 
       message: 'Error creating booking',
@@ -54,7 +66,10 @@ export const createBooking = async (req: Request, res: Response) => {
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
     const bookings = await Booking.findAll({
-      include: [{ model: Flight }],
+      include: [{ 
+        model: Flight,
+        attributes: ['flightNumber', 'flightName', 'departureAirport', 'arrivalAirport', 'departureTime', 'arrivalTime', 'price']
+      }],
     });
 
     res.json(bookings);
@@ -71,7 +86,10 @@ export const getBookingById = async (req: Request, res: Response) => {
 
     const booking = await Booking.findOne({
       where: { id, userId },
-      include: [{ model: Flight }]
+      include: [{ 
+        model: Flight,
+        attributes: ['flightNumber', 'flightName', 'departureAirport', 'arrivalAirport', 'departureTime', 'arrivalTime', 'price']
+      }]
     });
 
     if (!booking) {
@@ -146,7 +164,7 @@ export const getUserBookings = async (req: Request, res: Response) => {
       where: { userId },
       include: [{ 
         model: Flight,
-        attributes: ['flightNumber', 'departureAirport', 'arrivalAirport', 'departureTime', 'arrivalTime', 'price']
+        attributes: ['flightNumber', 'flightName', 'departureAirport', 'arrivalAirport', 'departureTime', 'arrivalTime', 'price']
       }],
       order: [['createdAt', 'DESC']] // Most recent bookings first
     });
@@ -179,28 +197,28 @@ export const getUserBookings = async (req: Request, res: Response) => {
   }
 };
 
-export const processPayment = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user?.id;
-    const { paymentDetails } = req.body;
+// export const processPayment = async (req: Request, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user?.id;
+//     const { paymentDetails } = req.body;
 
-    const booking = await Booking.findOne({
-      where: { id, userId }
-    });
+//     const booking = await Booking.findOne({
+//       where: { id, userId }
+//     });
 
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
+//     if (!booking) {
+//       return res.status(404).json({ message: 'Booking not found' });
+//     }
 
-    // TODO: Implement payment processing logic
-    await booking.update({ status: 'paid' });
-    res.json({ message: 'Payment processed successfully' });
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    res.status(500).json({ message: 'Error processing payment' });
-  }
-};
+//     // TODO: Implement payment processing logic
+//     await booking.update({ status: 'confirmed' as const }); // Change status to 'confirmed' instead of 'paid'
+//     res.json({ message: 'Payment processed successfully' });
+//   } catch (error) {
+//     console.error('Error processing payment:', error);
+//     res.status(500).json({ message: 'Error processing payment' });
+//   }
+// };
 
 export const confirmBooking = async (req: Request, res: Response) => {
   try {
@@ -208,7 +226,7 @@ export const confirmBooking = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     const booking = await Booking.findOne({
-      where: { id, userId, status: 'paid' }
+      where: { id, userId, status: 'pending' }
     });
 
     if (!booking) {

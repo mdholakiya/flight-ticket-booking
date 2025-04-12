@@ -111,6 +111,7 @@ export default function Home() {
         id: flightId,
         airline: "Emirates",
         flightNumber: "EK123",
+        flightName: "Emirates Dubai Express",
         departureAirport: departureAirport || "New York (JFK)",
         arrivalAirport: arrivalAirport || "London (LHR)",
         departureTime: departureDate || "2024-03-20T10:00:00",
@@ -138,11 +139,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <div className="text-2xl font-bold text-blue-600">SkyJourney</div>
+              <div className="text-2xl font-bold text-blue-600">AirLink</div>
               <div className="hidden md:flex space-x-6">
                 <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">Home</Link>
                 <Link href="/flights" className="text-gray-700 hover:text-blue-600 transition-colors">Flights</Link>
-                <Link href="/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">My Bookings</Link>
+                {/* <Link href="/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">My Bookings</Link> */}
               </div>
             </div>
             <div className="flex items-center space-x-4">

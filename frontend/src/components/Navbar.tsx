@@ -77,9 +77,11 @@ export default function Navbar() {
               >
                 Flights
               </Link>
-              <Link href="/bookings" className="text-gray-700 hover:text-primary-600 transition-colors">
-                My Bookings
-              </Link>
+              {user && (
+                <Link href="/bookings" className="text-gray-700 hover:text-primary-600 transition-colors">
+                  My Bookings
+                </Link>
+              )}
             </div>
           </div>
 
@@ -196,9 +198,11 @@ export default function Navbar() {
             >
               Flights
             </Link>
-            <Link href="/bookings" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
-              My Bookings
-            </Link>
+            {user && (
+              <Link href="/bookings" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg">
+                My Bookings
+              </Link>
+            )}
             {user && (
               <>
                 <div className="border-t border-gray-100 my-2"></div>

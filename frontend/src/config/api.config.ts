@@ -7,24 +7,29 @@ export const API_CONFIG = {
     LOGOUT: '/auth/logout',
     
     // User
-    PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/profile',
-    REQUEST_OTP: '/users/request-otp',
-    RESET_PASSWORD: '/users/change-password',
+    PROFILE: '/auth/profile',
+    UPDATE_PROFILE: '/auth/update-profile',
+    REQUEST_OTP: '/auth/request-otp',
+    RESET_PASSWORD: '/auth/reset-password',
+    CURRENT_USER: '/auth/current-user',
+    CHECK_USER: '/auth/check-user',
     
     // Flights
-    FLIGHTS: '/flights/flights',
-    SEARCH_FLIGHTS: '/flights/flights/search',
-    FILTER_FLIGHTS: '/flights/flights/filter',
-    FLIGHT_DETAILS: (id: string) => `/flights/flights/${id}`,
+    FLIGHTS: '/flights',
+    SEARCH_FLIGHTS: '/flights/search',
+    FILTER_FLIGHTS: '/flights/filter',
+    FLIGHT_DETAILS: (id: string) => `/flights/${id}`,
     
     // Bookings
     BOOKINGS: '/bookings',
     USER_BOOKINGS: (userId: string) => `bookings/bookings/${userId}`,
-    BOOKING_DETAILS: (id: string) => `/bookings/bookings/${id}`,
-    CANCEL_BOOKING: (id: string) => `/bookings/bookings/${id}`,
-    PROCESS_PAYMENT: (id: string) => `/bookings/bookings/${id}/payment`,
+    BOOKING_DETAILS: (id: string) => `/bookings/${id}`,
+    CANCEL_BOOKING: (id: string) => `/bookings/${id}/cancel`,
     CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
+    
+    // Payment endpoints
+    CREATE_PAYMENT_INTENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment-intent`,
+    PROCESS_PAYMENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment`,
   },
   TOKEN_KEY: 'flight_booking_token',
 }; 

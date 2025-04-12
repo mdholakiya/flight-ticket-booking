@@ -16,6 +16,7 @@ interface Flight {
   id: string;
   flightNumber: string;
   airline: string;
+  flightName: string;
   departureCity: string;
   arrivalCity: string;
   departureTime: string;
@@ -158,8 +159,9 @@ export default function FlightBookingPage() {
         {/* Flight Details Card */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            {flight.airline} - Flight {flight.flightNumber}
+            {flight.airline} - {flight.flightName}
           </h2>
+          <div className="text-gray-600 mb-4">Flight {flight.flightNumber}</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex items-center text-gray-700">

@@ -12,6 +12,7 @@ interface CreateFlightData {
   price: number;
   availableSeats: number;
   classType: 'Economy' | 'Business Class' | 'First Class';
+  flightName: string;
 }
 
 interface FlightData {
@@ -23,7 +24,7 @@ interface FlightData {
   price: number;
   availableSeats: number;
   classType: 'Economy' | 'Business Class' | 'First Class';
-
+  flightName: string;
 }
 
 interface FlightSearchQuery extends ParsedQs {
@@ -79,6 +80,7 @@ export const createFlight = async (req: Request, res: Response): Promise<void> =
       price,
       availableSeats,
       classType,
+      flightName
     } = req.body;
 
     // Log the request body for debugging
@@ -130,7 +132,8 @@ export const createFlight = async (req: Request, res: Response): Promise<void> =
       arrivalTime: parsedArrivalTime,
       price,
       availableSeats,
-      classType
+      classType,
+      flightName: flightName || `Flight ${flightNumber}` // Default name if not provided
     } as any);
 
     console.log('Flight created:', flight);

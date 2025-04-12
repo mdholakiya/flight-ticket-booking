@@ -49,6 +49,7 @@ const FlightList: React.FC<FlightListProps> = ({ flights, loading, onFlightSelec
             <div className="flex flex-col">
               <span className="text-lg font-semibold text-gray-800">{flight.airline}</span>
               <span className="text-sm text-gray-500">Flight {flight.flightNumber}</span>
+              <span className="text-sm text-gray-600">{flight.flightName}</span>
             </div>
 
             {/* Flight Times */}
