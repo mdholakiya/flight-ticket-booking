@@ -14,57 +14,58 @@ import { toast } from 'react-hot-toast';
 
 const Profile = () => {
   const router = useRouter();
-  const { user, token, refreshUser } = useAuth();
+  const { user, token, refreshUser, isAuthenticated } = useAuth();
   const [userData, setUserData] = useState<{ name: string; email: string } | null>(null);
   const [showUpdateProfile, setShowUpdateProfile] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  console.log("token",token);
   useEffect(() => {
     const checkAuthAndFetchProfile = async () => {
-      if (!token) {
-        router.replace('/login');
-        return;
-      }
-
       try {
-        await fetchUserProfile();
+        setIsLoading(true);
+        
+        if (!isAuthenticated || !token) {
+          toast.error('Please login to access your profile');
+          router.replace('/login');
+          return;
+        }
+
+        // First try to refresh user data
+        await refreshUser();
+
+        // Then fetch profile data
+        const response = await userService.getProfile();
+        if (response) {
+          setUserData(response);
+        }
       } catch (error) {
-        console.error('Failed to fetch profile:', error);
-        router.replace('/login');
+        console.error('Profile fetch error:', error);
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          localStorage.removeItem('token');
+          toast.error('Session expired. Please login again');
+          router.replace('/login');
+        } else {
+          toast.error('Failed to load profile data');
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkAuthAndFetchProfile();
-  }, [token, router]);
-
-  const fetchUserProfile = async () => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROFILE}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.data) {
-        setUserData(response.data);
-      } else {
-        throw new Error('No profile data received');
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      router.replace('/login');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [router, refreshUser, isAuthenticated, token]);
 
   const handleProfileUpdate = async () => {
     try {
       setIsLoading(true);
       await refreshUser();
-      await fetchUserProfile();
+      // Fetch updated profile data
+      const response = await userService.getProfile();
+      if (response) {
+        setUserData(response);
+      }
       setShowUpdateProfile(false);
       toast.success('Profile updated successfully!');
     } catch (error) {

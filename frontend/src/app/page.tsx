@@ -45,10 +45,17 @@ export default function Home() {
       // Call API with search params
       const response = await flightService.filterFlights(params);
       
-      // const flightsArray = response.data?.data || [];
-      // setData({ flights: flightsArray });
-      setData(response);
-      if (response.length === 0) {
+      // Check if response has the correct structure
+      if (response?.data) {
+        setData({ flights: response.data });
+      } else if (Array.isArray(response)) {
+        setData({ flights: response });
+      } else {
+        setData({ flights: [] });
+        setError('No flights found for your search criteria.');
+      }
+      
+      if ((!response?.data?.length && !Array.isArray(response)) || response.length === 0) {
         setError('No flights found for your search criteria. Please try different dates or routes.');
       }
     } catch (error) {

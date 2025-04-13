@@ -2,9 +2,9 @@ export const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api/api/v1',
   ENDPOINTS: {
     // Auth
-    LOGIN: '/users/login',
-    REGISTER: '/users/register',
-    LOGOUT: '/users/logout',
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    LOGOUT: '/auth/logout',
     
     // User
     PROFILE: '/users/profile',

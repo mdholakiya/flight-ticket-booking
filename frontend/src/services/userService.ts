@@ -8,6 +8,7 @@ interface User {
   phone?: string;
 }
 
+// Create axios instance with interceptor to handle auth token
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   headers: {
@@ -15,11 +16,30 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
 class UserService {
  
 
   async getProfile(): Promise<User> {
-    const response = await api.get( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.PROFILE);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    const response = await api.get(API_CONFIG.ENDPOINTS.PROFILE, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return response.data;
   }
 
@@ -41,16 +61,34 @@ class UserService {
     }
   }
 
-  async login(email: string, password: string): Promise<User> {
-    const response = await api.post( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGIN, {
-      email,
-      password
-    });
-    return response.data;
+  async login(email: string, password: string): Promise<{ user: User; token: string }> {
+    try {
+      const response = await api.post(API_CONFIG.ENDPOINTS.LOGIN, {
+        email,
+        password,
+      });
+      
+      // Validate response data
+      if (!response.data.token || !response.data.user) {
+        throw new Error('Invalid response from server');
+      }
+      
+      // Store the JWT token
+      localStorage.setItem('token', response.data.token);
+      
+      return {
+        user: response.data.user,
+        token: response.data.token
+      };
+    } catch (error: any) {
+      // Clear any existing token on error
+      localStorage.removeItem('token');
+      throw error;
+    }
   }
 
   async register(userData: { name: string; email: string; password: string; phone?: string }): Promise<User> {
-    const response = await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.REGISTER, userData);
+    const response = await api.post(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, userData);
     return response.data;
   }
 

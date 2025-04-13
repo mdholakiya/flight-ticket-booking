@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { API_CONFIG } from '@/config/api.config'; // Update path based on your project structur
 import { userService } from '@/services/userService';
 import axios from 'axios';
 
-export const fetchUserData = async () => {
-  const response = await userService.getProfile();
-  return response;
-};
+// export const fetchUserData = async () => {
+//   const response = await userService.getProfile();
+//   return response;
+// };
 
-console.log("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
+// console.log(" token dddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",token);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,24 +22,26 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // If user is already authenticated, redirect them
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      // const redirect = searchParams?.get('redirect') || '/profile';
-      router.push('/profile');
+      router.replace('/profile');
     }
-  }, [isAuthenticated, router, searchParams]);
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      // Attempt login
+      // const { user, token } = await userService.login(email, password);
+      const user = await userService.login(email, password);
+      console.log("user",user);
+    
       toast.success('Login successful!');
-      router.replace('/profile'); // Using replace instead of push to avoid back button issues
+      router.replace('/profile');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.response?.data?.message || 'Invalid email or password');
@@ -47,16 +49,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  // Remove or modify the useEffect that's causing double redirection
-  useEffect(() => {
-    if (isAuthenticated && router) {
-      const currentPath = window.location.pathname;
-      if (currentPath === '/login') {
-        router.replace('/profile');
-      }
-    }
-  }, [isAuthenticated, router]);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-sky-950 via-sky-900 to-sky-800">
