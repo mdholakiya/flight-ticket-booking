@@ -18,11 +18,20 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
+import Payment from '@/components/Payment';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 interface SeatSelection {
   seatNumber: string;
   price: number;
   class: 'Economy' | 'Business' | 'First';
+}
+
+interface UserData {
+  id: string;
+  email: string;
+  name?: string;
 }
 
 const SEAT_CONFIG = {
@@ -185,10 +194,18 @@ export default function BookingPage() {
     }
 
     try {
-      // Check if user exists with the provided email
-      const userExists = await userService.checkUserExists(passengerDetails.email);
-      
-      if (!userExists) {
+      // Check if user exists and get user data
+      let userData: UserData | null = null;
+      try {
+        const user = await userService.getCurrentUser();
+        userData = user;
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setShowAuthModal(true);
+        return;
+      }
+
+      if (!userData || !userData.id) {
         setShowAuthModal(true);
         return;
       }
@@ -198,10 +215,90 @@ export default function BookingPage() {
         return;
       }
 
-      setBookingStep('payment');
+      // Calculate total amount and prepare booking data
+      const totalAmount = selectedSeats.reduce((total, seat) => total + seat.price, 0);
+      
+      // Create booking data object
+      const bookingData = {
+        userId: userData.id,
+        passengerName: passengerDetails.name,
+        passengerEmail: passengerDetails.email,
+        numberOfSeats: selectedSeats.length,
+        totalPrice: totalAmount,
+        flightDetails: {
+          flightNumber: flight?.flightNumber,
+          departure: flight?.departureAirport,
+          arrival: flight?.arrivalAirport,
+          departureTime: flight?.departureTime,
+          arrivalTime: flight?.arrivalTime
+        },
+        seats: selectedSeats,
+        status: 'pending', // Set initial status as pending
+        bookingDate: new Date().toISOString()
+      };
+
+      // Create booking record using booking service
+      const response = await bookingService.createBooking(params?.id as string, bookingData);
+      console.log('Booking Response:', response);
+
+      if (response && response.id) {
+        // Store booking ID for reference
+        localStorage.setItem('currentBookingId', response.id);
+        
+        // Show success message
+        toast.success('Booking created successfully!');
+        
+        // Proceed to payment step
+        setBookingStep('payment');
+        router.push('/bookings');
+      } else {
+        console.error('Invalid booking response:', response);
+        throw new Error('Failed to create booking');
+      }
+
     } catch (error) {
-      console.error('Error checking user:', error);
-      setError('Something went wrong. Please try again.');
+      console.error('Error creating booking:', error);
+      toast.error('Failed to create booking. Please try again.');
+      setError('Failed to create booking. Please try again.');
+    }
+  };
+
+  const handleBookingSuccess = async () => {
+    try {
+      const bookingId = localStorage.getItem('currentBookingId');
+      if (bookingId) {
+        // Update booking status to confirmed
+        await bookingService.confirmBooking(bookingId);
+        
+        // Clear booking ID from storage
+        localStorage.removeItem('currentBookingId');
+      }
+      
+      setBookingStep('confirmation');
+      setTimeout(() => {
+        router.push('/bookings');
+      }, 3000);
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      toast.error('Failed to update booking status');
+    }
+  };
+
+  const handleBookingCancel = async () => {
+    try {
+      const bookingId = localStorage.getItem('currentBookingId');
+      if (bookingId) {
+        // Cancel the booking
+        await bookingService.cancelBooking(bookingId);
+        
+        // Clear booking ID from storage
+        localStorage.removeItem('currentBookingId');
+      }
+      
+      setBookingStep('details');
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel booking');
     }
   };
 
@@ -312,6 +409,7 @@ export default function BookingPage() {
    
   };
 
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -380,35 +478,7 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* Authentication Modal */}
-        {showAuthModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <div className="flex items-center mb-4 text-red-600">
-                <ExclamationCircleIcon className="h-6 w-6 mr-2" />
-                <h3 className="text-lg font-semibold">Login Required</h3>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Please log in to continue with your booking.
-              </p>
-              <div className="flex flex-col space-y-3">
-                <button
-                  onClick={() => handleAuthRedirect('login')}
-                  className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-                >
-                  Log In to Continue
-                </button>
-                <button
-                  onClick={() => setShowAuthModal(false)}
-                  className="w-full text-gray-600 py-2"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
+     
         {/* Content based on current step */}
         <div className="bg-white rounded-lg shadow-md p-6">
           {bookingStep === 'seats' && (
@@ -506,7 +576,7 @@ export default function BookingPage() {
                   onClick={handleDetailsSubmit}
                   className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
                 >
-                  Continue to Payment
+                  Continue to booking
                 </button>
               </div>
             </div>
@@ -515,115 +585,17 @@ export default function BookingPage() {
           {bookingStep === 'payment' && (
             <div>
               <h3 className="text-xl font-semibold mb-4">Payment Details</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                  <input
-                    type="text"
-                    value={paymentDetails.cardNumber}
-                    onChange={(e) => setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      validationErrors.cardNumber ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="1234 5678 9012 3456"
-                  />
-                  {validationErrors.cardNumber && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.cardNumber}</p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                    <input
-                      type="text"
-                      value={paymentDetails.expiryDate}
-                      onChange={(e) => setPaymentDetails({ ...paymentDetails, expiryDate: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-md ${
-                        validationErrors.expiryDate ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="MM/YY"
-                    />
-                    {validationErrors.expiryDate && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.expiryDate}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                    <input
-                      type="text"
-                      value={paymentDetails.cvv}
-                      onChange={(e) => setPaymentDetails({ ...paymentDetails, cvv: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-md ${
-                        validationErrors.cvv ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="123"
-                      maxLength={4}
-                    />
-                    {validationErrors.cvv && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.cvv}</p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name on Card</label>
-                  <input
-                    type="text"
-                    value={paymentDetails.nameOnCard}
-                    onChange={(e) => setPaymentDetails({ ...paymentDetails, nameOnCard: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      validationErrors.nameOnCard ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {validationErrors.nameOnCard && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.nameOnCard}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={passengerDetails.email}
-                    onChange={(e) => setPassengerDetails({ ...passengerDetails, email: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      validationErrors.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {validationErrors.email && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={passengerDetails.phone}
-                    onChange={(e) => setPassengerDetails({ ...passengerDetails, phone: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      validationErrors.phone ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="10-digit phone number"
-                  />
-                  {validationErrors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{validationErrors.phone}</p>
-                  )}
-                </div>
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <div className="flex justify-between mb-2">
-                    <span>Selected Seats:</span>
-                    <span>{selectedSeats.map(seat => seat.seatNumber).join(', ')}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Total Amount:</span>
-                    <span>${selectedSeats.reduce((total, seat) => total + seat.price, 0)}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={handlePaymentSubmit}
-                  className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-                >
-                  Pay and Confirm Booking
-                </button>
-              </div>
+              <Payment
+                amount={selectedSeats.reduce((total, seat) => total + seat.price, 0)}
+                flightDetails={{
+                  flightNumber: flight?.flightNumber || '',
+                  departure: flight?.departureAirport || '',
+                  arrival: flight?.arrivalAirport || '',
+                  price: selectedSeats.reduce((total, seat) => total + seat.price, 0)
+                }}
+                onSuccess={handleBookingSuccess}
+                onCancel={handleBookingCancel}
+              />
             </div>
           )}
 

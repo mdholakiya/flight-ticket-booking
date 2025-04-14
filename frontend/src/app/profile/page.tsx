@@ -26,14 +26,17 @@ const Profile = () => {
       try {
         setIsLoading(true);
         
-        if (!isAuthenticated || !token) {
+        // Check if token exists in localStorage as a backup
+        const storedToken = localStorage.getItem('token');
+        
+        if (!isAuthenticated || (!token && !storedToken)) {
           toast.error('Please login to access your profile');
           router.replace('/login');
           return;
         }
 
         // First try to refresh user data
-        await refreshUser();
+        // await refreshUser();
 
         // Then fetch profile data
         const response = await userService.getProfile();

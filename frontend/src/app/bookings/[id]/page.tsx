@@ -32,72 +32,36 @@ export default function BookingDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchBookingDetails = async () => {
       try {
-        const [bookingData, userData] = await Promise.all([
-          bookingService.getBookingDetails(id),
-          userService.getProfile()
-        ]);
-        setBooking(bookingData);
-        setUserEmail(userData.email);
-
-        // If booking is pending and we have user email, create payment intent
-        if (bookingData.status === 'PENDING' && userData.email) {
-          const { clientSecret } = await bookingService.createPaymentIntent(
-            bookingData.id,
-            bookingData.totalAmount * 100 // Convert to cents for Stripe
-          );
-          setClientSecret(clientSecret);
-        }
+        const data = await bookingService.getBookingDetails(id);
+        setBooking(data);
       } catch (err) {
-        console.error('Error:', err);
         setError('Failed to load booking details.');
+        console.error('Error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchBookingDetails();
   }, [id]);
 
   const handlePayment = async () => {
-    if (!userEmail) {
-      setError('Please log in to process payment.');
-      return;
-    }
-
     try {
       setProcessing(true);
-      setError(null);
-
-      // Initialize Stripe
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      if (!stripe || !clientSecret) {
-        throw new Error('Failed to initialize payment.');
-      }
-
-      // Confirm the payment with Stripe
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret);
-
-      if (stripeError) {
-        throw new Error(stripeError.message);
-      }
-
-      if (paymentIntent.status === 'succeeded') {
-        // Confirm the booking with our backend
-        await bookingService.confirmBooking(id);
-        
-        // Refresh booking details
-        const updatedBooking = await bookingService.getBookingDetails(id);
-        setBooking(updatedBooking);
-      }
-    } catch (err: any) {
+      await bookingService.processPayment(id, {
+        amount: booking?.totalAmount,
+      });
+      await bookingService.confirmBooking(id);
+      // Refresh booking details
+      const updatedBooking = await bookingService.getBookingDetails(id);
+      setBooking(updatedBooking);
+    } catch (err) {
+      setError('Payment processing failed. Please try again.');
       console.error('Payment error:', err);
-      setError(err.message || 'Payment processing failed. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -211,22 +175,13 @@ export default function BookingDetailsPage() {
                   >
                     Cancel Booking
                   </button>
-                  {userEmail ? (
-                    <button
-                      onClick={handlePayment}
-                      disabled={processing || !clientSecret}
-                      className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      {processing ? 'Processing Payment...' : 'Process Payment'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => router.push('/login')}
-                      className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700"
-                    >
-                      Login to Pay
-                    </button>
-                  )}
+                  <button
+                    onClick={handlePayment}
+                    disabled={processing}
+                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {processing ? 'Processing...' : 'Process Payment'}
+                  </button>
                 </>
               )}
               {booking.status === 'CONFIRMED' && (

@@ -15,6 +15,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { Flight } from '@/types/flight';
 import { flightService } from '@/services/flightService';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 interface FilterState {
   priceRange: [number, number];
@@ -35,6 +37,7 @@ export default function FlightsPage() {
     sortBy: null
   });
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     fetchFlights();
@@ -77,6 +80,18 @@ export default function FlightsPage() {
         return 0;
     }
   });
+
+  const handleBooking = (flightId: string) => {
+    const bookingPath = `/flights/${flightId}/booking`;
+    
+    if (!isAuthenticated) {
+      toast.error('Please login to book a flight');
+      const loginPath = `/login?returnTo=${encodeURIComponent(bookingPath)}`;
+      router.push(loginPath);
+      return;
+    }
+    router.push(bookingPath);
+  };
 
   if (loading) {
     return (
@@ -180,7 +195,7 @@ export default function FlightsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => router.push(`/flights/${flight.id}/booking`)}
+                    onClick={() => handleBooking(flight.id)}
                     className="mt-4 w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
                   >
                     Book Now

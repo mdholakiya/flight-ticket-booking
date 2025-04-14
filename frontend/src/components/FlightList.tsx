@@ -3,6 +3,8 @@ import { CalendarIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24
 import { Flight } from '@/types/flight';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 interface FlightListProps {
   flights: Flight[];
@@ -12,12 +14,26 @@ interface FlightListProps {
 
 const FlightList: React.FC<FlightListProps> = ({ flights, loading, onFlightSelect }) => {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const handleFlightSelect = (flightId: string) => {
-    if (onFlightSelect) {
-      onFlightSelect(flightId);
-    } else {
-      router.push(`/flights/${flightId}`);
+    const bookingPath = `/flights/${flightId}/booking`;
+    
+    if (!isAuthenticated) {
+      toast.error('Please login to book a flight');
+      const loginPath = `/login?returnTo=${encodeURIComponent(bookingPath)}`;
+      router.push(loginPath);
+      return;
+    }
+
+    try {
+      router.push(bookingPath);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to onFlightSelect if navigation fails
+      if (onFlightSelect) {
+        onFlightSelect(flightId);
+      }
     }
   };
 

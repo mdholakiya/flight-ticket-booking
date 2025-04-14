@@ -6,14 +6,17 @@ import { API_CONFIG } from '@/config/api.config';
 import axios from 'axios';
 import {
   CalendarIcon, MapPinIcon, UserIcon, ChevronUpIcon, ChevronDownIcon,
-  PhoneIcon, EnvelopeIcon, MapIcon, ArrowRightIcon
+  PhoneIcon, EnvelopeIcon, MapIcon, ArrowRightIcon, UserCircleIcon
 } from '@heroicons/react/24/outline';
 import FlightList from '@/components/FlightList';
 import FlightFilter from '@/components/Flightfilter';
 import { Flight, FlightSearchParams } from '@/types/flight';
 import { flightService } from '@/services/flightService';
+import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 export default function Home() {
+  const { user, logout } = useAuth();
   // Form states
   const [departureAirport, setDepartureAirport] = useState('');
   const [arrivalAirport, setArrivalAirport] = useState('');
@@ -35,6 +38,7 @@ export default function Home() {
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleSearch = async (params: FlightSearchParams) => {
     try {
@@ -149,15 +153,73 @@ export default function Home() {
               <div className="hidden md:flex space-x-6">
                 <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">Home</Link>
                 <Link href="/flights" className="text-gray-700 hover:text-blue-600 transition-colors">Flights</Link>
-                {/* <Link href="/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">My Bookings</Link> */}
+                {user && (
+                  <Link href="/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">My Bookings</Link>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {isLoggedIn ? (
-                <button className="flex items-center space-x-2 text-gray-700 hover:text-blue-600">
-                  <UserIcon className="h-6 w-6" />
-                  <span>Profile</span>
-                </button>
+              {user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="profile-button p-2 rounded-full hover:bg-gray-100 transition-all duration-200"
+                  >
+                    {user.profilePicture ? (
+                      <Image
+                        src={user.profilePicture}
+                        alt="Profile"
+                        className="h-8 w-8 rounded-full ring-2 ring-primary-100"
+                        width={32}
+                        height={32}
+                      />
+                    ) : (
+                      <UserCircleIcon className="h-8 w-8 text-primary-600" />
+                    )}
+                  </button>
+
+                  {/* Profile Dropdown */}
+                  {isProfileOpen && (
+                    <div className="profile-menu absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 transform transition-all">
+                      <div className="py-1">
+                        <Link
+                          href="/profile"
+                          className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="mr-3 h-5 w-5 text-gray-400 group-hover:text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                          My Profile
+                        </Link>
+                        <Link
+                          href="/bookings"
+                          className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="mr-3 h-5 w-5 text-gray-400 group-hover:text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                          </svg>
+                          My Bookings
+                        </Link>
+                      </div>
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            logout();
+                            setIsProfileOpen(false);
+                          }}
+                          className="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="mr-3 h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <Link href="/login" className="text-gray-700 hover:text-blue-600">Login</Link>

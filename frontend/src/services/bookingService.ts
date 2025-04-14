@@ -3,11 +3,14 @@ import { API_CONFIG } from '../config/api.config';
 
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(API_CONFIG.TOKEN_KEY);
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -16,7 +19,12 @@ api.interceptors.request.use((config) => {
 
 export const bookingService = {
   createBooking: async (flightId: string, bookingData: any) => {
-    const response = await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.BOOKINGS, {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    const response = await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.BOOKINGS,
+       {
       flightId,
       ...bookingData,
     });
@@ -48,16 +56,16 @@ export const bookingService = {
 
   confirmBooking: async (id: string) => {
     const response = await api.post(
-      API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.CONFIRM_BOOKING(id)
+      API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.CONFIRM_PAYMENT(id)
     );
     return response.data;
   },
 
-  createPaymentIntent: async (bookingId: string, amount: number) => {
-    const response = await api.post(
-      API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.CREATE_PAYMENT_INTENT(bookingId),
-      { amount }
-    );
-    return response.data;
-  },
+  // createPaymentIntent: async (bookingId: string, amount: number) => {
+  //   const response = await api.post(
+  //     API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.CREATE_PAYMENT_INTENT(bookingId),
+  //     { amount }
+  //   );
+  //   return response.data;
+  // },
 }; 

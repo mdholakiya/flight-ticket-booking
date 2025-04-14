@@ -8,9 +8,9 @@ export const API_CONFIG = {
     
     // User
     PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/update-profile',
+    UPDATE_PROFILE: '/users/profile',
     REQUEST_OTP: '/users/request-otp',
-    RESET_PASSWORD: '/users/reset-password',
+    RESET_PASSWORD: '/users/change-password',
     // CURRENT_USER: '/users/current-user',
     // CHECK_USER: '/users/check-user',
     
@@ -26,11 +26,11 @@ export const API_CONFIG = {
     USER_BOOKINGS: (userId: string) => `/bookings/bookings/${userId}`,
     BOOKING_DETAILS: (id: string) => `/bookings/${id}`,
     CANCEL_BOOKING: (id: string) => `/bookings/${id}/cancel`,
-    CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
+    CONFIRM_PAYMENT: (id: string) => `/bookings/bookings/${id}/confirm`,
     
     // Payment endpoints
-    CREATE_PAYMENT_INTENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment-intent`,
+    // CREATE_PAYMENT_INTENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment-intent`,
     PROCESS_PAYMENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment`,
   },
-  TOKEN_KEY: 'flight_booking_token',
+  TOKEN_KEY:'flight_booking_token',
 }; 

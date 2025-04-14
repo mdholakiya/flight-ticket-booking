@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { API_CONFIG } from '@/config/api.config'; // Update path based on your project structur
@@ -22,26 +22,32 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPath = searchParams?.get('returnTo') || null;
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/profile');
+      if (returnPath) {
+        router.replace(returnPath);
+      } else {
+        router.replace('/profile');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, returnPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Attempt login
-      // const { user, token } = await userService.login(email, password);
-      const user = await userService.login(email, password);
-      console.log("user",user);
-    
+      await login(email, password);
       toast.success('Login successful!');
-      router.replace('/profile');
+      if (returnPath) {
+        router.replace(returnPath);
+      } else {
+        router.replace('/profile');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.response?.data?.message || 'Invalid email or password');

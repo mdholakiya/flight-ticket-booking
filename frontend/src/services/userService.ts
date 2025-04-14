@@ -28,8 +28,6 @@ api.interceptors.request.use((config) => {
 });
 
 class UserService {
- 
-
   async getProfile(): Promise<User> {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -93,8 +91,9 @@ class UserService {
   }
 
   async logout(): Promise<void> {
-    await api.post( API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGOUT);
+    localStorage.removeItem('token');
+    await api.post(API_CONFIG.BASE_URL+API_CONFIG.ENDPOINTS.LOGOUT);
   }
 }
 
-export const userService = new UserService(); 
+export const userService = new UserService();

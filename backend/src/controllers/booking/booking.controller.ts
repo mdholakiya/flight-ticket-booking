@@ -201,10 +201,11 @@ export const getUserBookings = async (req: Request, res: Response) => {
 //   try {
 //     const { id } = req.params;
 //     const userId = req.user?.id;
-//     const { paymentDetails } = req.body;
+//     // const { paymentDetails } = req.body;
+//     // console.log('paymentDetails------------------', paymentDetails);
 
 //     const booking = await Booking.findOne({
-//       where: { id, userId }
+//       where: { id, userId ,status: 'pending' }
 //     });
 
 //     if (!booking) {
@@ -226,15 +227,15 @@ export const confirmBooking = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     const booking = await Booking.findOne({
-      where: { id, userId, status: 'pending' }
+      where: { id, userId }
     });
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found or not paid' });
     }
 
-    await booking.update({ status: 'confirmed' });
-    res.json({ message: 'Booking confirmed successfully' });
+    await booking.update({ status: 'confirmed'});
+    res.json({ message: 'payment received and booking confirmed successfully' });
   } catch (error) {
     console.error('Error confirming booking:', error);
     res.status(500).json({ message: 'Error confirming booking' });
