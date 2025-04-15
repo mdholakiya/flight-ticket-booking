@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import Booking from '../../models/booking.js';
 import Flight from '../../models/flight.js';
+import Stripe from 'stripe';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2023-10-16' as any // Type assertion to bypass the version check
+});
 
 interface CreateBookingBody {
   flightId: number;
@@ -197,29 +205,61 @@ export const getUserBookings = async (req: Request, res: Response) => {
   }
 };
 
-// export const processPayment = async (req: Request, res: Response) => {
-//   try {
-//     const { id } = req.params;
-//     const userId = req.user?.id;
-//     // const { paymentDetails } = req.body;
-//     // console.log('paymentDetails------------------', paymentDetails);
+export const processPayment = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const { totalPrice } = req.body;
 
-//     const booking = await Booking.findOne({
-//       where: { id, userId ,status: 'pending' }
-//     });
+    // Validate amount
+    if (!totalPrice || typeof totalPrice !== 'number' || totalPrice <= 0) {
+      return res.status(400).json({
+        message: 'Invalid amount. Please provide a valid positive number.',
+      });
+    }
 
-//     if (!booking) {
-//       return res.status(404).json({ message: 'Booking not found' });
-//     }
+    const booking = await Booking.findOne({
+      where: { id, userId, status: 'pending' }
+    });
 
-//     // TODO: Implement payment processing logic
-//     await booking.update({ status: 'confirmed' as const }); // Change status to 'confirmed' instead of 'paid'
-//     res.json({ message: 'Payment processed successfully' });
-//   } catch (error) {
-//     console.error('Error processing payment:', error);
-//     res.status(500).json({ message: 'Error processing payment' });
-//   }
-// };
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found or already confirmed' });
+    }
+
+    // Convert to smallest currency unit (paise)
+    const amountInPaise = Math.round(totalPrice);
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInPaise,
+      currency: 'inr',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        bookingId: id,
+        userId: userId || 'unknown'
+      }
+    });
+
+    // Return the client secret to the frontend
+    await booking.update({ status: 'confirmed'});
+    res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      message: 'PaymentIntent created successfully',
+      paymentIntentId: paymentIntent.id,
+      bookingId: id,
+      status: 'confirmed'
+    });
+
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({
+      message: 'Failed to create PaymentIntent',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
 
 export const confirmBooking = async (req: Request, res: Response) => {
   try {

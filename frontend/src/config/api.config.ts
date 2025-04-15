@@ -21,12 +21,15 @@ export const API_CONFIG = {
     FLIGHT_DETAILS: (id: string) => `/flights/flights/${id}`,
     
     // Bookings
-    BOOKINGS: '/bookings/bookings',
+    ALL_BOOKINGS: '/bookings/bookings',
     CREATE_BOOKING: '/bookings/bookings',
+    CANCEL_BOOKING: (id: string) => `/bookings/bookings/${id}`,
+    BOOKING_DETAILS: (id: string) => `/bookings/bookings/${id}`,
+    UPDATE_BOOKING: (id: string) => `/bookings/bookings/${id}`,
+    CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
+    // User bookings
     USER_BOOKINGS: (userId: string) => `/bookings/bookings/${userId}`,
-    BOOKING_DETAILS: (id: string) => `/bookings/${id}`,
-    CANCEL_BOOKING: (id: string) => `/bookings/${id}/cancel`,
-    CONFIRM_PAYMENT: (id: string) => `/bookings/bookings/${id}/confirm`,
+    // CONFIRM_PAYMENT: (id: string) => `/bookings/bookings/${id}/confirm`,
     
     // Payment endpoints
     // CREATE_PAYMENT_INTENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment-intent`,

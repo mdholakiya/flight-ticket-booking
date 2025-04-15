@@ -55,7 +55,7 @@ export default function BookingDetailsPage() {
       await bookingService.processPayment(id, {
         amount: booking?.totalAmount,
       });
-      await bookingService.confirmBooking(id);
+      // await bookingService.confirmBooking(id);
       // Refresh booking details
       const updatedBooking = await bookingService.getBookingDetails(id);
       setBooking(updatedBooking);
@@ -93,22 +93,22 @@ export default function BookingDetailsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
-          <button
+          {/* <button
             onClick={() => router.push('/flights')}
             className="text-blue-600 hover:underline"
           >
             Back to Flights
-          </button>
+          </button> */}
         </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
+    <main className="min-h-screen bg-gray-50  py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center  mb-6">
             <h1 className="text-3xl font-bold">Booking Details</h1>
             <div className="px-4 py-2 rounded-full bg-blue-100 text-blue-800">
               {booking.status}
@@ -121,23 +121,23 @@ export default function BookingDetailsPage() {
               <div className="space-y-2">
                 <p>
                   <span className="font-medium">Airline:</span>{' '}
-                  {booking.flight.airline}
+                  {booking?.flight?.airline || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">Flight Name:</span>{' '}
-                  {booking.flight.flightName}
+                  {booking?.flight?.flightName || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">Flight Number:</span>{' '}
-                  {booking.flight.flightNumber}
+                  {booking?.flight?.flightNumber || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">From:</span>{' '}
-                  {booking.flight.departureCity}
+                  {booking?.flight?.departureCity || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">To:</span>{' '}
-                  {booking.flight.arrivalCity}
+                  {booking?.flight?.arrivalCity || 'Loading...'}
                 </p>
               </div>
             </div>
@@ -147,18 +147,18 @@ export default function BookingDetailsPage() {
               <div className="space-y-2">
                 <p>
                   <span className="font-medium">Departure:</span>{' '}
-                  {booking.flight.departureTime}
+                  {booking?.flight?.departureTime || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">Arrival:</span>{' '}
-                  {booking.flight.arrivalTime}
+                  {booking?.flight?.arrivalTime || 'Loading...'}
                 </p>
                 <p>
                   <span className="font-medium">Passengers:</span>{' '}
-                  {booking.passengers}
+                  {booking?.passengers || 0}
                 </p>
                 <p className="text-2xl font-bold text-blue-600">
-                  ${booking.totalAmount.toFixed(2)}
+                  ${(booking?.totalAmount || 0).toFixed(2)}
                 </p>
               </div>
             </div>

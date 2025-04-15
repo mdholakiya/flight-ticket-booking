@@ -7,6 +7,7 @@ import { API_CONFIG } from '@/config/api.config';
 import { flightService } from '@/services/flightService';
 import { bookingService } from '@/services/bookingService';
 import { userService } from '@/services/userService';
+import { useAuth } from '@/context/AuthContext';
 import {
   CalendarIcon,
   ClockIcon,
@@ -21,6 +22,7 @@ import {
 import Payment from '@/components/Payment';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { loadStripe } from '@stripe/stripe-js';
 
 interface SeatSelection {
   seatNumber: string;
@@ -58,14 +60,13 @@ const SEAT_CONFIG = {
 export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<SeatSelection[]>([]);
   const [selectedClass, setSelectedClass] = useState<'Economy' | 'Business' | 'First'>('Economy');
   const [bookingStep, setBookingStep] = useState<'seats' | 'details' | 'payment' | 'confirmation'>('seats');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [passengerDetails, setPassengerDetails] = useState({
     name: '',
     email: '',
@@ -85,18 +86,38 @@ export default function BookingPage() {
     email?: string;
     phone?: string;
   }>({});
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    fetchFlightDetails();
-    checkAuthentication();
-  }, []);
+    const initializePage = async () => {
+      try {
+        // Wait for auth to be initialized
+        if (authLoading) return;
+
+        // If not authenticated, redirect to login
+        if (!isAuthenticated) {
+          // Save current URL to redirect back after login
+          localStorage.setItem('redirectAfterLogin', window.location.pathname);
+          router.push('/login');
+          return;
+        }
+
+        // Fetch flight details
+        await fetchFlightDetails();
+        await checkAuthentication();
+      } catch (error) {
+        console.error('Error initializing page:', error);
+        setError('Failed to initialize page');
+      }
+    };
+
+    initializePage();
+  }, [authLoading, isAuthenticated]);
 
   const checkAuthentication = async () => {
     try {
       const user = await userService.getCurrentUser();
-      setIsAuthenticated(!!user);
       if (user) {
-        // Pre-fill passenger details if user is authenticated
         setPassengerDetails({
           name: user.name || '',
           email: user.email || '',
@@ -105,7 +126,6 @@ export default function BookingPage() {
       }
     } catch (error) {
       console.error('Error checking authentication:', error);
-      setIsAuthenticated(false);
     }
   };
 
@@ -194,6 +214,7 @@ export default function BookingPage() {
     }
 
     try {
+      setProcessing(true);
       // Check if user exists and get user data
       let userData: UserData | null = null;
       try {
@@ -201,17 +222,22 @@ export default function BookingPage() {
         userData = user;
       } catch (error) {
         console.error('Error checking user:', error);
-        setShowAuthModal(true);
+        localStorage.setItem('bookingState', JSON.stringify({
+          passengerDetails,
+          selectedSeats,
+          selectedClass
+        }));
+        router.push('/login');
         return;
       }
 
       if (!userData || !userData.id) {
-        setShowAuthModal(true);
-        return;
-      }
-
-      if (!isAuthenticated) {
-        setShowAuthModal(true);
+        localStorage.setItem('bookingState', JSON.stringify({
+          passengerDetails,
+          selectedSeats,
+          selectedClass
+        }));
+        router.push('/login');
         return;
       }
 
@@ -233,33 +259,110 @@ export default function BookingPage() {
           arrivalTime: flight?.arrivalTime
         },
         seats: selectedSeats,
-        status: 'pending', // Set initial status as pending
+        status: 'pending',
         bookingDate: new Date().toISOString()
       };
 
       // Create booking record using booking service
-      const response = await bookingService.createBooking(params?.id as string, bookingData);
-      console.log('Booking Response:', response);
-
-      if (response && response.id) {
+      const bookingResponse = await bookingService.createBooking(params?.id as string, bookingData);
+      
+      if (bookingResponse && bookingResponse.id) {
         // Store booking ID for reference
-        localStorage.setItem('currentBookingId', response.id);
-        
-        // Show success message
+        localStorage.setItem('currentBookingId', bookingResponse.id);
         toast.success('Booking created successfully!');
         
-        // Proceed to payment step
+        // First change the booking step to payment and wait for the component to render
         setBookingStep('payment');
-        router.push('/bookings');
+        
+        // Wait for the payment element container to be available
+        setTimeout(async () => {
+          try {
+            const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string);
+            if (!stripe) throw new Error('Failed to load Stripe');
+
+            // Process payment using booking service
+            const paymentResponse = await bookingService.processPayment(bookingResponse.id, { 
+              totalPrice: Math.round(totalAmount * 100)
+            });
+            
+            if (!paymentResponse || !paymentResponse.clientSecret) {
+              throw new Error('Invalid payment response');
+            }
+
+            // Wait for the payment element container to be available
+            const paymentElementContainer = document.getElementById('payment-element');
+            if (!paymentElementContainer) {
+              throw new Error('Payment element container not found');
+            }
+
+            // Create Stripe Elements instance
+            const elements = stripe.elements({
+              clientSecret: paymentResponse.clientSecret,
+              appearance: {
+                theme: 'stripe',
+                variables: {
+                  colorPrimary: '#0066cc',
+                  colorBackground: '#ffffff',
+                  colorText: '#30313d',
+                }
+              }
+            });
+
+            // Create and mount payment element
+            const paymentElement = elements.create('payment');
+            paymentElement.mount('#payment-element');
+
+            // Set up form submission handler
+            const form = document.getElementById('payment-form');
+            if (form) {
+              form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                setProcessing(true);
+
+                try {
+                  const result = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                      return_url: `${window.location.origin}/bookings?payment_status=succeeded&booking_id=${bookingResponse.id}`,
+                      payment_method_data: {
+                        billing_details: {
+                          name: passengerDetails.name,
+                          email: passengerDetails.email,
+                        }
+                      }
+                    }
+                  });
+
+                  if (result.error) {
+                    throw new Error(result.error.message || 'Payment failed');
+                  }
+
+                  toast.success('Payment successful! Redirecting to bookings...');
+                } catch (error: any) {
+                  console.error('Payment error:', error);
+                  toast.error(error.message || 'Payment failed');
+                  setError(error.message || 'Payment failed');
+                } finally {
+                  setProcessing(false);
+                }
+              });
+            }
+          } catch (error: any) {
+            console.error('Error setting up payment:', error);
+            toast.error('Failed to set up payment. Please try again.');
+            setError('Failed to set up payment');
+            setProcessing(false);
+          }
+        }, 1000); // Increased timeout to ensure DOM is ready
       } else {
-        console.error('Invalid booking response:', response);
         throw new Error('Failed to create booking');
       }
-
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      toast.error('Failed to create booking. Please try again.');
-      setError('Failed to create booking. Please try again.');
+    } catch (error: any) {
+      console.error('Error in booking process:', error);
+      toast.error(error.message || 'Failed to complete booking. Please try again.');
+      setError(error.message || 'Failed to complete booking');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -334,8 +437,8 @@ export default function BookingPage() {
     }
 
     // CVV validation (3 or 4 digits)
-    if (!paymentDetails.cvv.match(/^\d{3,4}$/)) {
-      errors.cvv = 'Please enter a valid CVV (3 or 4 digits)';
+    if (!paymentDetails.cvv.match(/^\d{3}$/)) {
+      errors.cvv = 'Please enter a valid CVV (3 digits)';
     }
 
     // Name validation
@@ -409,6 +512,44 @@ export default function BookingPage() {
    
   };
 
+  // Update the payment form render function
+  const renderPaymentForm = () => {
+    if (bookingStep === 'payment') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-md mb-4">
+            <h4 className="font-semibold mb-2">Booking Summary</h4>
+            <div className="text-sm text-gray-600">
+              <p>Passenger: {passengerDetails.name}</p>
+              <p>Email: {passengerDetails.email}</p>
+              <p>Total Amount: ${selectedSeats.reduce((total, seat) => total + seat.price, 0)}</p>
+            </div>
+          </div>
+          
+          <form id="payment-form" className="space-y-4">
+            <div id="payment-element" className="min-h-[200px] border rounded-md p-4 bg-white">
+              {/* Stripe Payment Element will be mounted here */}
+            </div>
+            <button
+              type="submit"
+              disabled={processing}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {processing ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                'Pay Now'
+              )}
+            </button>
+          </form>
+        </div>
+      );
+    }
+    return null;
+  };
 
   if (loading) {
     return (
@@ -572,6 +713,9 @@ export default function BookingPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
+                <div id="payment-element" className="mt-4">
+                  {/* Stripe Payment Element will be mounted here */}
+                </div>
                 <button
                   onClick={handleDetailsSubmit}
                   className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
@@ -583,28 +727,32 @@ export default function BookingPage() {
           )}
 
           {bookingStep === 'payment' && (
-            <div>
+            <div className="mt-6 bg-white rounded-lg shadow-md p-6">
               <h3 className="text-xl font-semibold mb-4">Payment Details</h3>
-              <Payment
-                amount={selectedSeats.reduce((total, seat) => total + seat.price, 0)}
-                flightDetails={{
-                  flightNumber: flight?.flightNumber || '',
-                  departure: flight?.departureAirport || '',
-                  arrival: flight?.arrivalAirport || '',
-                  price: selectedSeats.reduce((total, seat) => total + seat.price, 0)
-                }}
-                onSuccess={handleBookingSuccess}
-                onCancel={handleBookingCancel}
-              />
+              {renderPaymentForm()}
             </div>
           )}
 
           {bookingStep === 'confirmation' && (
-            <div className="text-center py-8">
-              <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600">
-                Your booking has been confirmed. You will be redirected to your bookings page shortly.
+            <div className="mt-6 bg-white rounded-lg shadow-md p-6 text-center">
+              <div className="mb-4">
+                <svg
+                  className="mx-auto h-12 w-12 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Payment Successful!</h3>
+              <p className="text-gray-600 mt-2">
+                Your booking has been confirmed. You will be redirected to your booking details.
               </p>
             </div>
           )}

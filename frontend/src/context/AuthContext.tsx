@@ -20,6 +20,7 @@ interface AuthContextType {
   updateUser: (userData: Partial<User>) => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,13 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Set up axios interceptor for adding token to requests
   useEffect(() => {
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Get token from localStorage every time to ensure we have the latest
+        const currentToken = localStorage.getItem('token');
+        if (currentToken) {
+          config.headers.Authorization = `Bearer ${currentToken}`;
         }
         return config;
       },
@@ -67,18 +71,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.interceptors.request.eject(requestInterceptor);
       api.interceptors.response.eject(responseInterceptor);
     };
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    // Load user data from localStorage on initial load
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-      refreshUser().catch(() => {
-        // If refresh fails, clear everything
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      try {
+        // Load token from localStorage
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) {
+          setToken(storedToken);
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          
+          // Try to get user data
+          const response = await api.get(API_CONFIG.ENDPOINTS.PROFILE);
+          const userData = response.data;
+          
+          setUser(userData);
+          setIsAuthenticated(true);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        // Clear everything if there's an error
         logout();
-      });
-    }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -94,17 +116,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('No token received from server');
       }
 
-      // Set token first
-      setToken(authToken);
+      // Set token in localStorage first
       localStorage.setItem('token', authToken);
-
-      // Then set user data
+      
+      // Set token in axios headers
+      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      
+      // Update state
+      setToken(authToken);
       setUser(userData);
       setIsAuthenticated(true);
+      
+      // Store user data
       localStorage.setItem('user', JSON.stringify(userData));
-
-      // Set default authorization header
-      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -130,14 +154,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      if (!token) throw new Error('No token available');
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        throw new Error('No token available');
+      }
 
+      // Ensure the token is set in axios headers
+      api.defaults.headers.common['Authorization'] = `Bearer ${currentToken}`;
+      
       const response = await api.get(API_CONFIG.ENDPOINTS.PROFILE);
       const userData = response.data;
       
       setUser(userData);
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(userData));
+      return userData;
     } catch (error) {
       console.error('Refresh user error:', error);
       logout();
@@ -169,7 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register, 
         updateUser, 
         refreshUser,
-        isAuthenticated 
+        isAuthenticated,
+        isLoading
       }}
     >
       {children}
