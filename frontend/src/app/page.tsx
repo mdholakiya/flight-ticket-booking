@@ -15,6 +15,12 @@ import { flightService } from '@/services/flightService';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 
+// Add this interface after the existing imports
+interface Airport {
+  city: string;
+  code: string;
+}
+
 export default function Home() {
   const { user, logout } = useAuth();
   // Form states
@@ -39,6 +45,12 @@ export default function Home() {
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Add these state variables after other useState declarations
+  const [departureAirportSuggestions, setDepartureAirportSuggestions] = useState<Airport[]>([]);
+  const [arrivalAirportSuggestions, setArrivalAirportSuggestions] = useState<Airport[]>([]);
+  const [showDepartureSuggestions, setShowDepartureSuggestions] = useState(false);
+  const [showArrivalSuggestions, setShowArrivalSuggestions] = useState(false);
 
   const handleSearch = async (params: FlightSearchParams) => {
     try {
@@ -71,19 +83,17 @@ export default function Home() {
     }
   };
 
-  const incrementCount = (type: 'adults' | 'children') => {
-    if (type === 'adults' && adults < 9) {
+  const incrementCount = () => {
+    const totalPassengers = adults + children;
+    if (totalPassengers < 9) {
       setAdults(adults + 1);
-    } else if (type === 'children' && children < 9) {
-      setChildren(children + 1);
     }
   };
 
-  const decrementCount = (type: 'adults' | 'children') => {
-    if (type === 'adults' && adults > 1) {
-      setAdults(adults - 1);
-    } else if (type === 'children' && children > 0) {
-      setChildren(children - 1);
+  const decrementCount = () => {
+    const totalPassengers = adults + children;
+    if (totalPassengers > 1) {
+      setAdults(Math.max(1, adults - 1));
     }
   };
 
@@ -139,6 +149,32 @@ export default function Home() {
       setError('Failed to fetch flight details. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add this function after other function declarations
+  const handleAirportSearch = async (value: string, type: 'departure' | 'arrival') => {
+    try {
+      if (value.length < 2) {
+        type === 'departure' ? setDepartureAirportSuggestions([]) : setArrivalAirportSuggestions([]);
+        return;
+      }
+
+      const response = await flightService.searchAirports(value);
+      const suggestions = response.map((airport: any) => ({
+        city: airport.city,
+        code: airport.code
+      }));
+      
+      if (type === 'departure') {
+        setDepartureAirportSuggestions(suggestions);
+        setShowDepartureSuggestions(true);
+      } else {
+        setArrivalAirportSuggestions(suggestions);
+        setShowArrivalSuggestions(true);
+      }
+    } catch (error) {
+      console.error('Error fetching airport suggestions:', error);
     }
   };
 
@@ -321,7 +357,7 @@ export default function Home() {
             </div>
 
             {/* Travel Class Selection */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 TRAVEL CLASS
               </label>
@@ -334,36 +370,83 @@ export default function Home() {
                 <option value="Business">Business</option>
                 <option value="First">First Class</option>
               </select>
-            </div>
+            </div> */}
 
             {/* From, To, Passengers Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2 col-span-2 relative">
                 <label className="block text-sm font-medium text-gray-700">
                   From
                 </label>
-                <input
-                  type="text"
-                  value={departureAirport}
-                  onChange={(e) => setDepartureAirport(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Departure City"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={departureAirport}
+                    onChange={(e) => {
+                      setDepartureAirport(e.target.value);
+                      handleAirportSearch(e.target.value, 'departure');
+                    }}
+                    onFocus={() => setShowDepartureSuggestions(true)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Departure City"
+                  />
+                  {showDepartureSuggestions && departureAirportSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {departureAirportSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center"
+                          onClick={() => {
+                            setDepartureAirport(suggestion.city);
+                            setShowDepartureSuggestions(false);
+                          }}
+                        >
+                          <span>{suggestion.city}</span>
+                          <span className="text-gray-500 text-sm">{suggestion.code}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2 col-span-2 relative">
                 <label className="block text-sm font-medium text-gray-700">
                   To
                 </label>
-                <input
-                  type="text"
-                  value={arrivalAirport}
-                  onChange={(e) => setArrivalAirport(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Arrival City"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={arrivalAirport}
+                    onChange={(e) => {
+                      setArrivalAirport(e.target.value);
+                      handleAirportSearch(e.target.value, 'arrival');
+                    }}
+                    onFocus={() => setShowArrivalSuggestions(true)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Arrival City"
+                  />
+                  {showArrivalSuggestions && arrivalAirportSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {arrivalAirportSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center"
+                          onClick={() => {
+                            setArrivalAirport(suggestion.city);
+                            setShowArrivalSuggestions(false);
+                          }}
+                        >
+                          <span>{suggestion.city}</span>
+                          <span className="text-gray-500 text-sm">{suggestion.code}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* Passengers Selection with Controls */}
               <div className="space-y-2 col-span-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Passengers
@@ -396,7 +479,6 @@ export default function Home() {
                 travelClass,
                 isRoundTrip
               }}
-  
             />
           </div>
         </section>

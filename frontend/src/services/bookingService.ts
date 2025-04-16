@@ -42,7 +42,7 @@ export const bookingService = {
     if (!token) {
       throw new Error('No authentication token found');
     }
-    const response = await api.get(API_CONFIG.ENDPOINTS.USER_BOOKINGS(userId));
+    const response = await api.get(API_CONFIG.ENDPOINTS.USER_BOOKINGS);
     return response.data;
   },
 
@@ -64,6 +64,7 @@ export const bookingService = {
       // First update the booking status
       const response = await api.post(
         API_CONFIG.ENDPOINTS.CANCEL_BOOKING(id),
+        
         { status: 'cancelled' }
       );
       

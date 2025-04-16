@@ -411,10 +411,16 @@ export default function BookingPage() {
     return emailRegex.test(email);
   };
 
+  // const validatePhone = (phone: string) => {
+  //   const phoneRegex = /^\d{10}$/;
+  //   return phoneRegex.test(phone.replace(/\D/g, ''));
+  // };
   const validatePhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
     const phoneRegex = /^\d{10}$/;
-    return phoneRegex.test(phone.replace(/\D/g, ''));
+    return phoneRegex.test(cleaned);
   };
+  
 
   const validatePaymentDetails = () => {
     const errors: {
@@ -709,7 +715,14 @@ export default function BookingPage() {
                   <input
                     type="tel"
                     value={passengerDetails.phone}
-                    onChange={(e) => setPassengerDetails({ ...passengerDetails, phone: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 10) {
+                        setPassengerDetails({ ...passengerDetails, phone: value });
+                      }
+                    }}
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>

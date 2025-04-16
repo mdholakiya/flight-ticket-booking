@@ -17,13 +17,49 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate for spaces
+    if (email.includes(' ') || password.includes(' ')) {
+      toast.error('Email and password cannot contain spaces');
+      return;
+    }
+
+    // Validate empty fields
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      toast.error('All fields are required');
+      return;
+    }
+
     try {
-      // await register(name, email, password);
-      await userService.register({ name, email, password });
-      toast.success('Registration successful!');
-      router.push('/login');
+      await userService.register({ name, email: email.trim(), password: password.trim() });
+      toast.success('Registration successful! Please login to continue.');
+      
+      // Get the saved booking path
+      const redirectPath = localStorage.getItem('redirectAfterAuth');
+      
+      // Redirect to login with the return URL
+      if (redirectPath) {
+        router.push(`/login?returnTo=${encodeURIComponent(redirectPath)}`);
+      } else {
+        router.push('/login');
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'name' | 'email' | 'password') => {
+    const value = e.target.value;
+    
+    // Allow spaces only in name field
+    if (field === 'name') {
+      setName(value);
+    } else if (field === 'email') {
+      // Remove spaces from email
+      setEmail(value.replace(/\s/g, ''));
+    } else if (field === 'password') {
+      // Remove spaces from password
+      setPassword(value.replace(/\s/g, ''));
     }
   };
 
@@ -49,7 +85,7 @@ export default function RegisterPage() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-sky-400/30 placeholder-sky-300/60 text-white bg-sky-900/40 rounded-t-md focus:outline-none focus:ring-sky-400 focus:border-sky-400 focus:z-10 sm:text-sm"
                 placeholder="Full Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => handleInputChange(e, 'name')}
               />
             </div>
             <div>
@@ -64,7 +100,7 @@ export default function RegisterPage() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-sky-400/30 placeholder-sky-300/60 text-white bg-sky-900/40 focus:outline-none focus:ring-sky-400 focus:border-sky-400 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleInputChange(e, 'email')}
               />
             </div>
             <div>
@@ -79,7 +115,7 @@ export default function RegisterPage() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-sky-400/30 placeholder-sky-300/60 text-white bg-sky-900/40 rounded-b-md focus:outline-none focus:ring-sky-400 focus:border-sky-400 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handleInputChange(e, 'password')}
               />
             </div>
           </div>

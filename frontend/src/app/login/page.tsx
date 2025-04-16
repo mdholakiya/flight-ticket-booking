@@ -38,13 +38,32 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate for spaces
+    if (email.includes(' ') || password.includes(' ')) {
+      toast.error('Email and password cannot contain spaces');
+      return;
+    }
+
+    // Validate empty fields
+    if (!email.trim() || !password.trim()) {
+      toast.error('All fields are required');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(email.trim(), password.trim());
       toast.success('Login successful!');
-      if (returnPath) {
-        router.replace(returnPath);
+      
+      // Check for redirect path from registration or direct booking attempt
+      const redirectPath = localStorage.getItem('redirectAfterAuth') || returnPath;
+      
+      if (redirectPath) {
+        // Clear the stored path
+        localStorage.removeItem('redirectAfterAuth');
+        router.replace(redirectPath);
       } else {
         router.replace('/profile');
       }
@@ -56,12 +75,23 @@ export default function LoginPage() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'email' | 'password') => {
+    const value = e.target.value;
+    
+    // Remove spaces from both email and password
+    if (field === 'email') {
+      setEmail(value.replace(/\s/g, ''));
+    } else if (field === 'password') {
+      setPassword(value.replace(/\s/g, ''));
+    }
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-sky-950 via-sky-900 to-sky-800">
       <div className="max-w-md w-full space-y-8 p-8 rounded-xl shadow-2xl border border-sky-400/20 bg-sky-950/40 backdrop-blur-sm">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold bg-gradient-to-r from-white to-sky-300 bg-clip-text text-transparent">
-            Sign in to your account
+            Login in to your account
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -78,7 +108,7 @@ export default function LoginPage() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-sky-400/30 placeholder-sky-300/60 text-white bg-sky-900/40 rounded-t-md focus:outline-none focus:ring-sky-400 focus:border-sky-400 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleInputChange(e, 'email')}
                 disabled={isLoading}
               />
             </div>
@@ -94,7 +124,7 @@ export default function LoginPage() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-sky-400/30 placeholder-sky-300/60 text-white bg-sky-900/40 rounded-b-md focus:outline-none focus:ring-sky-400 focus:border-sky-400 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handleInputChange(e, 'password')}
                 disabled={isLoading}
               />
             </div>
@@ -115,7 +145,7 @@ export default function LoginPage() {
                   Signing in...
                 </span>
               ) : (
-                'Sign in'
+                'Login'
               )}
             </button>
           </div>

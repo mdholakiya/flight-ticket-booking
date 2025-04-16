@@ -85,9 +85,43 @@ export default function FlightsPage() {
     const bookingPath = `/flights/${flightId}/booking`;
     
     if (!isAuthenticated) {
-      toast.error('Please login to book a flight');
-      const loginPath = `/login?returnTo=${encodeURIComponent(bookingPath)}`;
-      router.push(loginPath);
+      // Save the booking path for redirection after login/register
+      localStorage.setItem('redirectAfterAuth', bookingPath);
+      
+      // Show toast with options
+      toast((t) => (
+        <div className="flex flex-col space-y-2">
+          <div className="text-sm font-medium">Please login or register to book a flight</div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => {
+                router.push('/login');
+                toast.dismiss(t.id);
+              }}
+              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => {
+                router.push('/register');
+                toast.dismiss(t.id);
+              }}
+              className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
+              Register
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        style: {
+          padding: '16px',
+          borderRadius: '8px',
+          background: '#fff',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        },
+      });
       return;
     }
     router.push(bookingPath);

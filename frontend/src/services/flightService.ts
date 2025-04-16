@@ -43,4 +43,57 @@ export const flightService = {
     const response = await api.get(`${API_CONFIG.ENDPOINTS.FLIGHTS}`);
     return response.data;
   },
+
+  searchAirports: async (query: string) => {
+    try {
+      // First try to get suggestions from the flights database
+      const flightResponse = await api.get(`${API_CONFIG.ENDPOINTS.FLIGHTS}`, {
+        params: { 
+          search: query,
+          fields: ['departureAirport', 'arrivalAirport']
+        }
+      });
+
+      if (flightResponse.data && Array.isArray(flightResponse.data)) {
+        // Extract unique airports from flight data
+        const airports = new Set();
+        flightResponse.data.forEach((flight: any) => {
+          if (flight.departureAirport?.toLowerCase().includes(query.toLowerCase())) {
+            airports.add({ city: flight.departureAirport, code: flight.departureCode });
+          }
+          if (flight.arrivalAirport?.toLowerCase().includes(query.toLowerCase())) {
+            airports.add({ city: flight.arrivalAirport, code: flight.arrivalCode });
+          }
+        });
+        
+        const suggestions = Array.from(airports);
+        if (suggestions.length > 0) {
+          return suggestions;
+        }
+      }
+
+      // If no flights found or error, try the airports API
+      const response = await api.get(`${API_CONFIG.ENDPOINTS.SEARCH_AIRPORTS}`, {
+        params: { query }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error searching airports:', error);
+      // Fallback mock data
+      return [
+        { city: 'New York (JFK)', code: 'JFK' },
+        { city: 'New York (LGA)', code: 'LGA' },
+        { city: 'Newark (EWR)', code: 'EWR' },
+        { city: 'London (LHR)', code: 'LHR' },
+        { city: 'London (LGW)', code: 'LGW' },
+        { city: 'Paris (CDG)', code: 'CDG' },
+        { city: 'Dubai (DXB)', code: 'DXB' },
+        { city: 'Singapore (SIN)', code: 'SIN' },
+        { city: 'Tokyo (NRT)', code: 'NRT' },
+        { city: 'Hong Kong (HKG)', code: 'HKG' }
+      ].filter(airport => 
+        airport.city.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+  }
 }; 

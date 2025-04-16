@@ -19,6 +19,7 @@ export const API_CONFIG = {
     SEARCH_FLIGHTS: '/flights/flights/search',
     FILTER_FLIGHTS: '/flights/flights/filter',
     FLIGHT_DETAILS: (id: string) => `/flights/flights/${id}`,
+    SEARCH_AIRPORTS: '/flights/airports/search',
     
     // Bookings
     ALL_BOOKINGS: '/bookings/bookings',
@@ -26,14 +27,14 @@ export const API_CONFIG = {
     CANCEL_BOOKING: (id: string) => `/bookings/bookings/${id}`,
     BOOKING_DETAILS: (id: string) => `/bookings/bookings/${id}`,
     UPDATE_BOOKING: (id: string) => `/bookings/bookings/${id}`,
-    CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
     // User bookings
-    USER_BOOKINGS: (userId: string) => `/bookings/bookings/${userId}`,
+    USER_BOOKINGS:  `/bookings/bookings`,
     // CONFIRM_PAYMENT: (id: string) => `/bookings/bookings/${id}/confirm`,
     
     // Payment endpoints
     // CREATE_PAYMENT_INTENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment-intent`,
     PROCESS_PAYMENT: (bookingId: string) => `/bookings/bookings/${bookingId}/payment`,
+    CONFIRM_BOOKING: (id: string) => `/bookings/bookings/${id}/confirm`,
   },
   TOKEN_KEY:'flight_booking_token',
 }; 
